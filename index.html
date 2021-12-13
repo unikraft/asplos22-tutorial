@@ -6,14 +6,31 @@ Programming Languages and Operating Systems
 (ASPLOS'22)</a></strong>.</p><p>With the advance of virtualization technology and the constant demand for
 specialization, security and performance, unikernels are no longer a fringe
 idea. In this tutorial we present Unikraft, a unikernel SDK aiming for extreme
-specialization.</p><p>Unikraft is an open source project with a growing and vibrant community
+specialization.</p><p>Unikraft consists of core software components (i.e. internal libraries) and
+outside optional components (i.e. external libraries), most of which are
+existing software components (standard C libraries, runtime libraries,
+frameworks, applications) integrated with the core parts. By allowing extreme
+configurability and using common APIs backed by multiple implementations,
+Unikraft makes it easy to tailor custom software solutions for your use case: be
+it performance, reduced resource utilization, security and safety or
+functionality, Unikraft makes it happen.</p><p>Unikraft is an open source project with a growing and vibrant community
 available on <a href=https://github.com/unikraft/>GitHub</a> and
-<a href=https://bit.ly/UnikraftDiscord>Discord</a>.</p><p>This tutorial is highly practical. We will provide remote access to
+<a href=https://bit.ly/UnikraftDiscord>Discord</a>. The community consists of highly
+skilled industry contributors, academics and students, motivated in creating
+next-generation software products, pursuing novel research objectives and
+developing open and challenging technology in operating systems. Recent works
+realized on the basis of Unikraft include CubicleOS (ASPLOS'21) and FlexOS (to
+be separately presented at ASPLOS'22).</p><p>In this tutorial, we aim to get attendees accustomed to Unikraft and unikernel
+technology. We present Unikraft internals, highlight research prospects and
+showcase performance and specialization use cases. We start with an introduction
+in unikernels and Unikraft, details the build and configuration process of
+Unikraft, the porting / integration of libraries and applications (both in
+source code and in binary form) and performance-oriented scenarios.</p><p>The tutorial will be highly practical. We will provide remote access to
 pre-configured machines where attendees will build, configure, run and measure
-Unikraft-based software components. The tutorial is planned to take place for 6
-hours (e.g. 10am to 5pm - 1 hour break). Each section of this tutorial consists
-of a short presentation / demo (10-15 minutes) followed by practical work to be
-done by each attendee on their allocated remote machine. Trainers from the
-Unikraft community will provide instructions and support to attendees during the
-tutorial.</p></div><div class="summary mb-2"><h2 class=title-summary><a href=/intro/>Introduction to Unikraft</a></h2><p>&mldr;</p></div><div class="summary mb-2"><h2 class=title-summary><a href=/getting-started/>Getting started with Unikraft</a></h2><p>&mldr;</p></div><div class="summary mb-2"><h2 class=title-summary><a href=/a-look-inside/>Inside the config and build system</a></h2><p>&mldr;</p></div><div class="summary mb-2"><h2 class=title-summary><a href=/complex-apps/>Running complex applications</a></h2><p>&mldr;</p></div><div class="summary mb-2"><h2 class=title-summary><a href=/syscall_shim-bincompat/>syscall_shim and bincompat</a></h2><p>&mldr;</p></div><div class="summary mb-2"><h2 class=title-summary><a href=/current-research-and-dev/>Research and development</a></h2><p>&mldr;</p></div></div></div></div></div><footer class=sub-footer><div class="container py-5"><div class=row><div class="col-12 col-md">Unikraft
+Unikraft-based software components. Attendees are required to have a laptop and
+an SSH client to access the remote system. Attendees are expected to have good
+Linux/CLI/shell scripting skills, experience with C programming and build
+automation and general knowledge of virtualization technology.</p><p>Each section in the tutorial will consist of a short presentation / demo (10-15
+minutes) followed by practical work to be done by each attendee on their
+allocated remote machine.</p></div><div class="summary mb-2"><h2 class=title-summary><a href=/intro/>Introduction to Unikraft</a></h2><p>&mldr;</p></div><div class="summary mb-2"><h2 class=title-summary><a href=/getting-started/>Getting started with Unikraft</a></h2><p>&mldr;</p></div><div class="summary mb-2"><h2 class=title-summary><a href=/a-look-inside/>Inside the config and build system</a></h2><p>&mldr;</p></div><div class="summary mb-2"><h2 class=title-summary><a href=/complex-apps/>Running complex applications</a></h2><p>&mldr;</p></div><div class="summary mb-2"><h2 class=title-summary><a href=/syscall_shim-bincompat/>syscall_shim and bincompat</a></h2><p>&mldr;</p></div><div class="summary mb-2"><h2 class=title-summary><a href=/current-research-and-dev/>Research and development</a></h2><p>&mldr;</p></div></div></div></div></div><footer class=sub-footer><div class="container py-5"><div class=row><div class="col-12 col-md">Unikraft
 <small class="d-block mb-3 text-muted">© 2021</small></div><div class="col-6 col-md"><h5>Social</h5><ul class="list-unstyled text-small"><li><a class=text-muted href=https://twitter.com/UnikraftSDK>Twitter</a></li><li><a class=text-muted href=https://www.linkedin.com/company/unikraft-sdk/>LinkedIn</a></li></ul></div><div class="col-6 col-md"><h5>&nbsp;</h5><ul class="list-unstyled text-small"><li><a class=text-muted href=https://bit.ly/UnikraftDiscord>Discord</a></li><li><a class=text-muted href=https://github.com/unikraft/unikraft>GitHub</a></li></ul></div><div class="col-6 col-md"><h5>Resources</h5><ul class="list-unstyled text-small"><li><a class=text-muted href=https://unikraft.org>Unikraft Homepage</a></li><li><a class=text-muted href=https://unikraft.io>Unikraft Cloud</a></li></ul></div><div class="col-6 col-md"><h5>&nbsp;</h5><ul class="list-unstyled text-small"><li><a class=text-muted href=http://docs.unikraft.org>Documentation</a></li><li><a class=text-muted href=https://unikraft.org/license/>Open-Source Licenses</a></li></ul></div></div></footer></div><script type=text/javascript src=/js/scripts.min.eaf147370baecdd07c022597db631f99cab1c9cd6479de586f30327a568d6a0f.js></script></body></html>
