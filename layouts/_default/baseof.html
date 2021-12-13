@@ -17,6 +17,17 @@
   <link rel="stylesheet" href="{{ ($style | minify | fingerprint).RelPermalink }}">
   {{ end }}
 
+  {{ define "meta_tags" }}
+  <meta name="description" content="{{ .Site.Params.homepage_meta_tags.meta_description }}" />
+  <meta property="og:title" content="{{ .Site.Params.homepage_meta_tags.meta_og_title }}" />
+  <meta property="og:type" content="{{ .Site.Params.homepage_meta_tags.meta_og_type }}" />
+  <meta property="og:url" content="{{ .Site.Params.homepage_meta_tags.meta_og_url }}" />
+  <meta property="og:description" content="{{ .Site.Params.homepage_meta_tags.meta_og_description }}" />
+  <meta name="twitter:card" content="{{ .Site.Params.homepage_meta_tags.meta_twitter_card }}" />
+  <meta name="twitter:site" content="{{ .Site.Params.homepage_meta_tags.meta_twitter_site }}" />
+  <meta name="twitter:creator" content="{{ .Site.Params.homepage_meta_tags.meta_twitter_creator }}" />
+  {{ end }}
+
   {{ block "header_css" . }}{{ end }}
 
 </head>
