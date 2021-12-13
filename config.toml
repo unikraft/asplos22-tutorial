@@ -1,8 +1,6 @@
-baseURL = "www.example.com"
+title = "ASPLOS'22 Tutorial"
+baseURL = "asplos22.unikraft.org"
 languageCode = "en-us"
-title = "Hugo Whisper Theme"
-themesDir = "../.."
-theme = "hugo-whisper-theme"
 
 pygmentsCodeFences = true
 pygmentsCodefencesGuessSyntax = true
