@@ -16,13 +16,8 @@ pygmentsUseClasses = true
 summaryLength = 30
 
 [[menu.main]]
-    name = "Home"
-    url = "/"
-    weight = 1
-
-[[menu.main]]
-    name = "Docs"
-    url = "/docs/"
+    name = "Learn more about Unikraft"
+    url = "https://unikraft.org"
     weight = 2
 
 [params]
