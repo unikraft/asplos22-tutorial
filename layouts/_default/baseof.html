@@ -26,15 +26,7 @@
   <div class="wrapper">
     {{ partial "header.html" . }}
 
-    {{ $displaySidebar := false }}
-    {{ range .Site.Params.mainSections }}
-    {{ if eq $.Section . }}
-    {{ $displaySidebar = true }}
-    {{ end }}
-    {{ end }}
-
-    {{ if $displaySidebar }}
-    <div class="container pt-2 pt-md-6 pb-3 pb-md-6">
+    <div class="container pt-2 pt-md-4 pb-3 pb-md-6">
       <div class="row">
         <div class="col-12 col-md-3 mb-3">
           <div class="sidebar">
@@ -47,10 +39,6 @@
         </div>
       </div>
     </div>
-    {{ else }}
-    {{ block "main" . }}
-    {{ end }}
-    {{ end}}
   </div>
 
   {{ partial "sub-footer.html" . }}
