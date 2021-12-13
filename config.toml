@@ -47,5 +47,5 @@ summaryLength = 30
     meta_twitter_creator = "@zerostaticio"
 
   [params.logo]
-      mobile = "/images/logo-mobile.svg"
-      standard  = "/images/logo.svg"
+      mobile = "/images/unikraft.svg"
+      standard  = "/images/unikraft.svg"
