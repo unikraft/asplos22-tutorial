@@ -45,6 +45,7 @@ RUN set -xe; \
     apt-get install -y \
       curl \
       g++ \
+      git \
       lsb-release \
       gnupg; \
     curl -sLf -o /dev/null 'https://deb.nodesource.com/node_12.x/dists/buster/Release'; \
