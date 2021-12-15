@@ -6,5 +6,5 @@ summary: |
   This initial introduction provides a birds-eye view of Unikraft through
   a short-presentation.  In this presentation, we go over the basics of
   unikernels, their purpose and the motivation behind building unikernels with
-  the library Operating System model.
+  the library Operating System model. Expected time 15mn.
 ---
