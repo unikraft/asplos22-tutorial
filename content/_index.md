@@ -6,9 +6,9 @@ weight: 1
 
 ## Unikraft ASPLOS'22 Tutorial
 
-**To be held along with [International Conference on Architectural Support for
-Programming Languages and Operating Systems
-(ASPLOS'22)](https://asplos-conference.org)**.
+**To be held on Monday, February 28th 2022 along with [International
+Conference on Architectural Support for Programming Languages and
+Operating Systems (ASPLOS'22)](https://asplos-conference.org)**.
 
 With the advance of virtualization technology and the constant demand for
 specialization, security and performance, unikernels are no longer a fringe
@@ -50,3 +50,15 @@ automation and general knowledge of virtualization technology.
 Each section in the tutorial will consist of a short presentation / demo (10-15
 minutes) followed by practical work to be done by each attendee on their
 allocated remote machine.
+
+### Schedule
+
+| Time                | Session                                             | Host                   |
+| ------------------- | --------------------------------------------------- | ---------------------- |
+| 10:00 - 10:15 (CET) | High-level presentation of unikernels and Unikraft  | Pierre Olivier (UoM)   |
+| 10:15 - 11:15 (CET) | Getting started with Unikraft                       | TBD                    |
+| 11:30 - 12:30 (CET) | A look inside the build and configuration system    | TBD                    |
+| 13:30 - 14:30 (CET) | Running complex applications                        | TBD                    |
+| 14:45 - 15:45 (CET) | Running applications in binary compatibility        | TBD                    |
+| 16:00 - 17:00 (CET) | Using Unikraft for performance-oriented use cases   | TBD                    |
+| 17:15 - 17:45 (CET) | Current research and development highlights         | Hugo Lefeuvre (UoM)    |
