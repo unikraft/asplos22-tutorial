@@ -2,7 +2,7 @@
 title: Inside the config and build system
 date: 2019-02-11T19:27:37+10:00
 weight: 3
-summary: We take a look inside Unikraft internals: its build system and runtime infrastructure. Expected time 60mn.
+summary: We take a look inside Unikraft internals - its build system and runtime infrastructure. Expected time 60mn.
 ---
 
 ## Required Tools and Resources
