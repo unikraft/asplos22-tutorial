@@ -58,7 +58,7 @@ allocated remote machine.
 | 10:00 - 10:15 | High-level presentation of unikernels and Unikraft  | [Pierre Olivier](https://sites.google.com/view/pierreolivier) (UoM) and [Alex Jung](https://github.com/nderjung) (LU) |
 | 10:15 - 11:00 | Getting started with Unikraft (I)                   | [Alex Jung](https://github.com/nderjung) (LU) |
 | 11:00 - 11:30 | *Coffee Break 1 (Foyer Garden 4 & 5)*               | |
-| 11:30 - 12:00 | Getting started with Unikraft (II)                  | [Alexander Jung](https://github.com/nderjung) (Lancaster) |
+| 11:30 - 12:00 | Getting started with Unikraft (II)                  | [Alexander Jung](https://github.com/nderjung) (LU) |
 | 12:00 - 13:00 | A look inside the build and configuration system    | [Razvan Deaconescu](https://github.com/razvand) (UPB) |
 | 13:00 - 14:00 | *Lunch Break (on your own)*                         | |
 | 14:00 - 15:00 | Running complex applications                        | [Cristian Vijelie](https://github.com/cristian-vijelie) (UPB) |
