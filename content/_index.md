@@ -56,9 +56,13 @@ allocated remote machine.
 | Time                | Session                                             | Host                   |
 | ------------------- | --------------------------------------------------- | ---------------------- |
 | 10:00 - 10:15 (CET) | High-level presentation of unikernels and Unikraft  | [Pierre Olivier](https://sites.google.com/view/pierreolivier) (UoM) and [Alexander Jung](https://github.com/nderjung) (Lancaster) |
-| 10:15 - 11:15 (CET) | Getting started with Unikraft                       | [Alexander Jung](https://github.com/nderjung) (Lancaster) |
-| 11:30 - 12:30 (CET) | A look inside the build and configuration system    | [Razvan Deaconescu](https://github.com/razvand) (UPB) |
-| 13:30 - 14:30 (CET) | Running complex applications                        | [Cristian Vijelie](https://github.com/cristian-vijelie) |
-| 14:45 - 15:45 (CET) | Running applications in binary compatibility        | [Razvan Deaconescu](https://github.com/razvand) (UPB) |
-| 16:00 - 17:00 (CET) | Using Unikraft for performance-oriented use cases   | [Vlad-Andrei Bădoiu](https://vladandrew.github.io/) (UPB) |
-| 17:15 - 17:45 (CET) | Current research and development highlights         | [Hugo Lefeuvre](https://www.research.manchester.ac.uk/portal/en/researchers/hugo-lefeuvre(6a7c2d5d-c88b-427d-9a6f-5a1fa3ceae8f).html) (UoM) |
+| 10:15 - 11:00 (CET) | Getting started with Unikraft (I)                   | [Alexander Jung](https://github.com/nderjung) (Lancaster) |
+| 11:00 - 11:30 (CET) | Coffee Break 1 in Foyer Garden 4 and 5              | |
+| 11:30 - 12:00 (CET) | Getting started with Unikraft (II)                  | [Alexander Jung](https://github.com/nderjung) (Lancaster) |
+| 12:00 - 13:00 (CET) | A look inside the build and configuration system    | [Razvan Deaconescu](https://github.com/razvand) (UPB) |
+| 13:00 - 14:00 (CET) | Lunch Break (on your own)                           | |
+| 14:00 - 15:00 (CET) | Running complex applications                        | [Cristian Vijelie](https://github.com/cristian-vijelie) (UPB) |
+| 15:00 - 16:00 (CET) | Running applications in binary compatibility        | [Razvan Deaconescu](https://github.com/razvand) (UPB) |
+| 16:00 - 16:30 (CET) | Coffee Break 2 in Foyer Garden 4 and 5              | |
+| 16:30 - 17:30 (CET) | Using Unikraft for performance-oriented use cases   | [Vlad-Andrei Bădoiu](https://vladandrew.github.io/) (UPB) |
+| 17:30 - 17:45 (CET) | Current research and development highlights         | [Hugo Lefeuvre](https://www.research.manchester.ac.uk/portal/en/researchers/hugo-lefeuvre(6a7c2d5d-c88b-427d-9a6f-5a1fa3ceae8f).html) (UoM) |
