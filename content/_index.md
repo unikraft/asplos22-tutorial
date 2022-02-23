@@ -53,6 +53,8 @@ allocated remote machine.
 
 ### Schedule
 
+The tutorial will take place in Room 2A from 10:00 to 18:00 (CET).
+
 | Time (CET)    | Session                                             | Host                   |
 | ------------- | --------------------------------------------------- | ---------------------- |
 | 10:00 - 10:15 | High-level presentation of unikernels and Unikraft  | [Pierre Olivier](https://sites.google.com/view/pierreolivier) (UoM)<br/>[Alexander Jung](https://github.com/nderjung) (LU) |
