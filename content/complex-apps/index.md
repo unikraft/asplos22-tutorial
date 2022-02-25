@@ -11,7 +11,7 @@ In this session, we are going to run some real-world applications on top of Unik
 
 ### Support Files
 
-Session support files are available [in the repository](https://github.com/unikraft/summer-of-code-2021).
+Session support files are available [in the repository](https://github.com/unikraft/asplos22-tutorial).
 If you already cloned the repository, update it and enter the session directory:
 
 ```
@@ -19,7 +19,7 @@ $ cd path/to/repository/clone
 
 $ git pull --rebase
 
-$ cd content/en/complex-apps/
+$ cd content/complex-apps/
 
 $ ls -F
 images/  index.md  sol/  work/
@@ -28,7 +28,7 @@ images/  index.md  sol/  work/
 If you haven't cloned the repository yet, clone it and enter the session directory:
 
 ```
-$ git clone https://github.com/unikraft/summer-of-code-2021
+$ git clone https://github.com/unikraft/asplos22-tutorial
 
 $ cd summer-of-code-2021/content/en/complex-apps/
 
@@ -449,83 +449,3 @@ After that you'll get something like this:
 "SET","285714.28"
 "GET","294117.62"
 ```
-
-### 06. Nginx
-
-The aim of this work item is to set up and run Nginx.
-Find the support files in the `work/06-set-up-and-run-nginx/` folder of the session directory.
-
-From the point of view of the library dependencies, the nginx app has the same dependencies as the Redis app.
-It's your choice how you assign the IP to the VM.
-
-In the support folder of this work item there is a subfolder called `nginx` with the following structure:
-
-```
-nginx_files
-`-- nginx/
-    |-- conf/
-    |   |-- fastcgi.conf
-    |   |-- fastcgi_params
-    |   |-- koi-utf
-    |   |-- koi-win
-    |   |-- mime.types
-    |   |-- nginx.conf
-    |   |-- nginx.conf.default
-    |   |-- scgi_params
-    |   |-- uwsgi_params
-    |   `-- win-utf
-    |-- data/
-    |   `-- images/
-    |       `-- small-img100.png
-    |-- html/
-    |   |-- 50x.html
-    |   `-- index.html
-    `-- logs/
-        |-- error.log
-        `-- nginx.pid
-```
-
-The path to the `nginx_files` folder should be given as a parameter to the `-e option` of the `qemu-guest`.
-The `html/` folder stores the files of the website you want to be run.
-
-If everything works as expected, you should see the following web page in the browser.
-
-![nginx output](/complex-apps/images/nginx_output.png)
-
-### 07. Nginx Benchmarking (Tutorial)
-
-Benchmarking Nginx running on the top of Unikraft can be achieved with a utility called `iperf`.
-The package can be easily installed using the command:
-
-```
-sudo apt-get install -y iperf
-```
-
-Next, we will start the nginx app as we have done at the previous work item and then we will open another two terminals.
-We'll start an `iperf` server in the first terminal with the command:
-
-```
-$ iperf -s
-```
-
-In the second terminal we'll start an `iperf` client with the command:
-
-```
-$ iperf -c 172.44.0.76 -p 80
-```
-
-If everything runs as expected, then we will see the following output:
-
-```
-------------------------------------------------------------
-Client connecting to 172.44.0.76, TCP port 80
-TCP window size: 85.0 KByte (default)
-------------------------------------------------------------
-[  3] local 172.44.0.1 port 33262 connected with 172.44.0.76 port 80
-[ ID] Interval       Transfer     Bandwidth
-[  3]  0.0-10.0 sec  1.28 GBytes  1.10 Gbits/sec
-```
-
-### 08. Give Us Feedback
-
-We want to know how to make the next sessions better. For this we need your [feedback](https://forms.gle/QyvxBx19cK4fUYRS7). Thank you!
