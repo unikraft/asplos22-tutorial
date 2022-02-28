@@ -1,15 +1,19 @@
 ---
 specification: '0.5'
-name: app-helloworld
+name: 02-adding-filesystems
 unikraft:
-  version: 825b115
+  version: 'staging'
+  kconfig:
+    - TODO
+    - TODO
+    - TODO
 targets:
   - architecture: x86_64
     platform: kvm
 libraries:
   newlib:
-    version: 78263bd
+    version: 'staging'
     kconfig:
       - CONFIG_LIBNEWLIBC=y
-volumes: {}
-networks: {}
+volumes:
+  TODO
