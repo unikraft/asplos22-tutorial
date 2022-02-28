@@ -400,7 +400,7 @@ Remember, if your rate goes up or down with one of the following experiments, yo
 Now, we have can go through some options to play around with.
 
 Our overall goal is to get the packet rate of our packer generator as high as possible.
-Note your rate and bandwidth before and, after each of the steps because we are going over this list twice, make sure that you do the steps non-destructive and keep the code of each step.
+Note your rate and bandwidth before and, after each of the optimization steps because, make sure that you do the steps non-destructive and keep the code of each step.
 
 1. **Try compiler options**: Enable *Link Time Optimizations* (LTO) and *Dead Code Elimitation* (DCE) within `Build Options` of the `menuconfig`.
    The compiler reconsiders a second time optimizations like function inlining while linking the final binary;
@@ -448,8 +448,6 @@ this optimization today, but is good to know about it.
 
 Which option increased the performance the most?
 
-**Recommendation**: The pre-processor can help you switching between these two modes quickly:
-
 #### 06.1. Use a memory pool
 
 We provide a pool allocator library with Unikraft: `libukallocpool`.
@@ -459,7 +457,7 @@ First of all, add a dependency to this library in your `Config.uk`:
 depends on LIBUKALLOCPOOL
 ```
 
-This dependency makes the header `"<uk/allocpool.h>"` (within `[PATH-TO-UNIKRAFT]/lib/ukallocpool/include/uk/`) available.
+This dependency makes the header [`"<uk/allocpool.h>"`](https://github.com/unikraft/unikraft/blob/staging/lib/ukallocpool/include/uk/allocpool.h) available.
 
 In order to allocate one pool, you call `uk_allocpool_alloc()` at your application startup.
 The function will allocate the pool memory from a parent allocator.
@@ -486,8 +484,8 @@ struct uk_alloc *p;
 p = uk_allocpool2ukalloc(pool);
 ```
 
-`p` can then be handed over as normal allocator, like `uk_alloc_get_default()`.
-`p` will always return 2048B objects as long as the malloc request is smaller or equal to the initialized `obj_len`.
+`p` can then be handed over as normal allocator, simply replace all the calls to `uk_alloc_get_default()` with `p`.
+**Note**.`p` will always return 2048B objects as long as the malloc request is smaller or equal to the initialized `obj_len`.
 Any bigger allocation request cannot be satisfied and libukallocpool is returning `NULL`.
 
 ### 07. Receiver unikernel
