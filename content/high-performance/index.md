@@ -304,7 +304,7 @@ if (!uk_netdev_status_successful(status)) {
 	uk_netbuf_free(pkt);
 }
 
-/* Do not touch pkt here anymore */
+/* Do not touch pkt here anymore, on success uk_netdev_tx_one clears the memory  */
 /* <...> */
 ```
 
@@ -443,34 +443,12 @@ Besides these options, another common technique is using **batching**.
 Instead of sending one packet at a time, you send multiple ones at once.
 The advantage is that the device backend is notified just once per batch instead of for each packet.(less context switches)
 This reduces communication overhead.
-This feature is currently submitted as [PR#243](https://github.com/unikraft/unikraft/pull/243) and will be added in the near future.
+This feature is currently submitted as [PR#243](https://github.com/unikraft/unikraft/pull/243) and will be added in the near future. We'll not be using
+this optimization today, but is good to know about it.
 
-In order to understand better the bottlenecks in our implementation, we can isolate the code from the netdev device bottlenecks.
-This is done by replacing the send operation with `uk_netbuf_free()`.
-There we can assume that this means that every transmit operation works but this reveals more dominantly performance differences of the suggestions 1-5 ahead.
-Go over the list again and note the new collected rates.
-Which option results in the best performance?
+Which option increased the performance the most?
 
 **Recommendation**: The pre-processor can help you switching between these two modes quickly:
-
-```c
-#if 0 /* <-- toggle between these two blocks with 0 and 1 */
-	status = uk_netdev_tx_one(netif, 0, pkt);
-	if (uk_netdev_status_successful(status)) {
-		/* success */
-		total_nb_pkts += 1;
-		total_nb_bytes += 60 /* pktlen */ + 24;
-	} else {
-		/* failed */
-		uk_netbuf_free(pkt);
-	}
-#else
-	uk_netbuf_free(pkt);
-	/* always success */
-	total_nb_pkts += 1;
-	total_nb_bytes += 60 /* pktlen */ + 24;
-#endif
-```
 
 #### 06.1. Use a memory pool
 
@@ -556,7 +534,7 @@ Please note that this function expects that we initialized the global variables 
 Now you should be able to build the polling receive loop based on the following snippet:
 
 ```c
-status = uk_netdev_rx_one(netdev, 0, &pkt);
+status = uk_netdev_rx_one(dev, 0, &pkt);
 if (uk_netdev_status_successful(status)) {
 	/* count packet and bytes and free received packet */
 	nb_total_pkts += 1;
