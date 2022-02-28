@@ -1,7 +1,7 @@
-<!doctype html><html lang=en><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><title>syscall_shim and bincompat - ASPLOS'22 Tutorial</title><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Unikraft ASPLOS'22 Tutorial"><meta property="og:title" content="Unikraft ASPLOS'22 Tutorial"><meta property="og:type" content="website"><meta property="og:url" content="https://asplos22.unikraft.org"><meta property="og:description" content="ASPLOS'22 Tutorial on Unikraft: educating the community on unikernels, libOSes, and particularly Unikraft."><meta name=twitter:card content="summary"><meta name=twitter:site content="@UnikraftSDK"><meta name=twitter:creator content="@UnikraftSDK"><link rel=icon href=/favicon.png><link rel=stylesheet href=/css/style.min.9d91cadd6bf9a027131051416b1155705f1a4ce3735fcdef7072384726bf9590.css></head><body class="page page-default-single"><div id=main-menu-mobile class=main-menu-mobile><ul><li class="menu-item-learn more about unikraft"><a href=https://unikraft.org><span>Learn more about Unikraft</span></a></li></ul></div><div class=wrapper><div class=header><div class=container><div class=logo><a href=/><img alt=Logo src=/images/unikraft.svg>
+<!doctype html><html lang=en><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><title>Syscall Shim and Binary Compatibility Layer - ASPLOS'22 Tutorial</title><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Unikraft ASPLOS'22 Tutorial"><meta property="og:title" content="Unikraft ASPLOS'22 Tutorial"><meta property="og:type" content="website"><meta property="og:url" content="https://asplos22.unikraft.org"><meta property="og:description" content="ASPLOS'22 Tutorial on Unikraft: educating the community on unikernels, libOSes, and particularly Unikraft."><meta name=twitter:card content="summary"><meta name=twitter:site content="@UnikraftSDK"><meta name=twitter:creator content="@UnikraftSDK"><link rel=icon href=/favicon.png><link rel=stylesheet href=/css/style.min.9d91cadd6bf9a027131051416b1155705f1a4ce3735fcdef7072384726bf9590.css></head><body class="page page-default-single"><div id=main-menu-mobile class=main-menu-mobile><ul><li class="menu-item-learn more about unikraft"><a href=https://unikraft.org><span>Learn more about Unikraft</span></a></li></ul></div><div class=wrapper><div class=header><div class=container><div class=logo><a href=/><img alt=Logo src=/images/unikraft.svg>
 <span>ASPLOS'22 Tutorial</span></a></div><div class=logo-mobile><a href=/><img alt=Logo src=/images/unikraft.svg>
 <span>ASPLOS'22 Tutorial</span></a></div><div id=main-menu class=main-menu><ul><li class="menu-item-learn more about unikraft"><a href=https://unikraft.org><span>Learn more about Unikraft</span></a></li></ul></div><button id=toggle-main-menu-mobile class="hamburger hamburger--slider" type=button>
-<span class=hamburger-box><span class=hamburger-inner></span></span></button></div></div><div class="container pt-2 pt-md-4 pb-3 pb-md-6"><div class=row><div class="col-12 col-md-3 mb-3"><div class=sidebar><div class=docs-menu><h4></h4><ul><li><a href=/intro/>Introduction to Unikraft</a></li><li><a href=/getting-started/>Getting started with Unikraft</a></li><li><a href=/a-look-inside/>Inside the config and build system</a></li><li><a href=/complex-apps/>Running complex applications</a></li><li class=active><a href=/syscall_shim-bincompat/>syscall_shim and bincompat</a></li><li><a href=/high-performance/>High performance applications</a></li><li><a href=/current-research-and-dev/>Research and development</a></li><li><a href=/people/>People</a></li></ul></div></div></div><div class="col-12 col-md-9"><h1 class=title>syscall_shim and bincompat</h1><div class=content><p>In this session we are going to understand how we can run applications using the binary compatibility layer as well as the inner workings of the system call shim layer.</p><p>One of the obstacles when trying to use Unikraft could be the porting effort of your application.
+<span class=hamburger-box><span class=hamburger-inner></span></span></button></div></div><div class="container pt-2 pt-md-4 pb-3 pb-md-6"><div class=row><div class="col-12 col-md-3 mb-3"><div class=sidebar><div class=docs-menu><h4></h4><ul><li><a href=/intro/>Introduction to Unikraft</a></li><li><a href=/getting-started/>Getting started with Unikraft</a></li><li><a href=/a-look-inside/>Inside the config and build system</a></li><li><a href=/complex-apps/>Running complex applications</a></li><li class=active><a href=/syscall_shim-bincompat/>Syscall Shim and Binary Compatibility Layer</a></li><li><a href=/high-performance/>High performance applications</a></li><li><a href=/current-research-and-dev/>Research and development</a></li><li><a href=/people/>People</a></li></ul></div></div></div><div class="col-12 col-md-9"><h1 class=title>Syscall Shim and Binary Compatibility Layer</h1><div class=content><p>In this session we are going to understand how we can run applications using the binary compatibility layer as well as the inner workings of the system call shim layer.</p><p>One of the obstacles when trying to use Unikraft could be the porting effort of your application.
 One way we can avoid this is through binary compatibility.
 Binary compatibility is the possibility to take already compiled binaries and run them on top of Unikraft without porting effort and at the same time keeping the benefits of unikernels.
 In our case, we support binaries compiled for the Linux kernel.</p><p>In order to achieve binary compatibility with the Linux kernel, we had to find a way to have support for system calls, for this, the <strong>system call shim layer</strong> (also called <strong>syscall shim</strong>) was created.
@@ -59,19 +59,39 @@ Program Headers:
    05     .eh_frame_hdr
    06
    07     .tdata .init_array .fini_array .data.rel.ro .dynamic .got
-</code></pre></div><p>As an overview of the whole process, when we want to run an application on Unikraft using binary compatibility, the first step is to pass the application to the unikernel as an initial ram disk.
+</code></pre></div><p>As an overview of the whole process, when we want to run an application on Unikraft using binary compatibility, the first step is to pass the application to the unikernel as an initial ramdisk.
 Once the unikernel gets the application, the loader reads the executable segments and loads them accordingly.
 After the program is loaded, the last step is to jump to its entry point and start executing.</p><p>The loader that we currently have implemented in Unikraft only supports executables that are static (so all the libraries are part of the executables) and also position-independent.
-A position independent binary is a binary that can run correctly independent of the address at which it was loaded.
+A position independent binary (PIE) is a binary that can run correctly independent of the address at which it was loaded.
 So we need executables that are built using the <code>-static-pie</code> compiler / linker option, available in GCC since version 8.</p><h3 id=02-unikraft-syscall-shim>02. Unikraft Syscall Shim</h3><p>As stated previously, the system call shim layer in Unikraft is what we use in order to achieve the same system call behaviour as the Linux kernel.</p><p>Let&rsquo;s take a code snippet that does a system call from a binary:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>mov	edx,4		; message length
 mov	ecx,msg		; message to write
 mov	ebx,1		; file descriptor (stdout)
 mov	eax,4		; system call number (sys_write)
 syscall		    ; call kernel
 </code></pre></div><p>In this case, when the <code>syscall</code> instruction gets executed, we have to reach the write function inside our unikernel.
-In our case, when the <code>syscall</code> instruction gets called there are a few steps taken until we reach the <strong>system call</strong> inside Unikraft:</p><ol><li><p>After the <code>syscall</code> instruction gets executed we reach the <code>ukplat_syscall_handler</code>.
-This function has an intermediate role, printing some debug messages and passing the correct parameters further down.
-The next function that gets called is the <code>uk_syscall6_r</code> function.</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>void ukplat_syscall_handler(struct __regs *r)
+In our case, when the <code>syscall</code> instruction gets called there are a few steps taken until we reach the <strong>system call</strong> inside Unikraft:</p><ol><li><p>The <code>_ukplat_syscall</code> function is the handler attached to system call instructions.
+See <a href=https://github.com/unikraft/unikraft/blob/staging/plat/common/include/x86/cpu.h#L274>the source code</a>.
+Whenever the <code>syscall</code> instruction is executed, control is passed to the <code>_ukplat_syscall</code> function.</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>static inline void _init_syscall(void)
+{
+	[...]
+	wrmsrl(X86_MSR_LSTAR,
+        (__uptr) _ukplat_syscall);
+	[...]
+</code></pre></div></li><li><p>After some preparatory actions, <code>_ukplat_syscall</code> calls <code>ukplat_syscall_handler</code>.
+See <a href=https://github.com/unikraft/unikraft/blob/staging/plat/common/x86/syscall.S#L38>the source code</a>.</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>ENTRY(_ukplat_syscall)
+	[...]
+	/*
+  * Handle call
+  * NOTE: Handler function is going to modify saved registers state
+  * NOTE: Stack pointer as &#34;struct __regs *&#34; argument
+  *       (calling convention: 1st arg on %rdi)
+  */
+	movq %rsp, %rdi
+	call ukplat_syscall_handler
+	[...]
+</code></pre></div><p><code>ukplat_syscall_handler</code> is also an intermediary function, printing some debug messages and passing the correct parameters further down.
+The next function that gets called is the <code>uk_syscall6_r</code> function.
+See <a href=https://github.com/unikraft/unikraft/blob/staging/lib/syscall_shim/uk_syscall6_r.c.in_end#L7>the source code</a>.</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>void ukplat_syscall_handler(struct __regs *r)
 {
 	UK_ASSERT(r);
 
@@ -82,7 +102,8 @@ The next function that gets called is the <code>uk_syscall6_r</code> function.</
               r-&gt;rarg0, r-&gt;rarg1, r-&gt;rarg2,
               r-&gt;rarg3, r-&gt;rarg4, r-&gt;rarg5);
 }
-</code></pre></div></li><li><p>The <code>uk_syscall6_r</code> is the function that redirects the flow of the program to the actual <strong>system call</strong> function inside the kernel.</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>switch (nr) {
+</code></pre></div></li><li><p>The <code>uk_syscall6_r</code> is the function that redirects the flow of the program to the actual <strong>system call</strong> function inside the kernel.
+See <a href=https://github.com/unikraft/unikraft/blob/staging/lib/syscall_shim/gen_uk_syscall6_r.awk#L16>the generated source code</a>.</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>switch (nr) {
 	case SYS_brk:
      return uk_syscall_r_brk(arg1);
 	case SYS_arch_prctl:
@@ -140,27 +161,17 @@ We have the following definition of the write system call:</p><div class=highlig
     <span class=p>}</span>
 </code></pre></div><p>The last step is to add the system call to <code>UK_PROVIDED_SYSCALLS-y</code> in the <code>Makefile.uk</code> file.
 The format is:</p><p><code>UK_PROVIDED_SYSCALLS-$(CONFIG_&lt;YOURLIB>) += &lt;syscall_name>-&lt;number_of_arguments></code></p><p>So, in our case:</p><p><code>UK_PROVIDED_SYSCALLS-$(CONFIG_LIBWRITESYS) += write-3</code></p><h2 id=summary>Summary</h2><p>The binary compatibility layer is a very important part of the Unikraft unikernel.
-It helps us run applications that were not build for Unikraft while, at the same time, keeps the classic benefits of Unikraft: speed, security and small memory footprint.</p><h2 id=practical-work>Practical Work</h2><h3 id=support-files>Support Files</h3><p>Session support files are available <a href=https://github.com/unikraft/summer-of-code-2021>in the repository</a>.
-If you already cloned the repository, update it and enter the session directory:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>$ cd path/to/repository/clone
+It helps us run applications that were not build for Unikraft while, at the same time, keeps the classic benefits of Unikraft: speed, security and small memory footprint.</p><h2 id=work-items>Work Items</h2><h3 id=support-files>Support Files</h3><p>Session support files are available <a href=https://github.com/unikraft/asplos22-tutorial>in the repository</a>.
+The repository is already cloned in the virtual machine.</p><p>If you want to clone the repository yourself, do</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>$ git clone https://github.com/unikraft/asplos22-tutorial
 
-$ git pull --rebase
-
-$ cd content/en/syscall_shim-bincompat/
-
-$ ls -F
-demo/  images/  index.md  work/
-</code></pre></div><p>If you haven&rsquo;t cloned the repository yet, clone it and enter the session directory:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>$ git clone https://github.com/unikraft/summer-of-code-2021
-
-$ cd content/en/syscall_shim-bincompat/
+$ cd asplos22-tutorial/content/syscall_shim-bincompat/
 
 $ ls -F
 demo/  images/  index.md  work/
 </code></pre></div><h3 id=00-setup>00. Setup</h3><p>For the practical work we will need the following prerequisites:</p><ul><li><p><strong>gcc version >= 8</strong> - installation guide <a href=https://linuxize.com/post/how-to-install-gcc-compiler-on-ubuntu-18-04/>here</a></p></li><li><p><strong>the elfloader application</strong> - this is the implementation of our loader which is build like a normal Unikraft application.
 You can clone the <a href=https://github.com/skuenzer/app-elfloader/>ELF Loader repository</a>, on the <code>usoc21</code> branch.
-This cloned repo should go into the <code>apps</code> folder in your Unikraft directory structure.</p></li><li><p><strong>the configuration file</strong> - you can find the <code>config</code> files in the <code>demo/01</code> and <code>demo/03</code> folder of this session.</p></li><li><p><strong>lwip, zydis, libelf libs</strong> - we have to clone all the repos coresponding to the previously mentioned libraries into the libs folder.
-All of them have to be on the <code>staging</code> branch.</p><ul><li><a href=https://github.com/unikraft/lwip.git>lwip</a></li><li><a href=https://github.com/unikraft/lib-zydis.git>zydis</a></li><li><a href=https://github.com/unikraft/lib-libelf.git>libelf</a></li></ul></li><li><p><strong>unikraft</strong> - the <a href=https://github.com/unikraft/unikraft>Unikraft repository</a> must also be cloned and checked out on the <code>usoc21</code> branch.</p></li></ul><p>Set the repositories in a directory of your choosing.
-We&rsquo;ll call this directory <code>&lt;WORKDIR></code>.
-The final directory structure for this session should look like this:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>workdir/
+This cloned repo should go into the <code>apps</code> folder in your Unikraft directory structure.</p></li><li><p><strong>the configuration file</strong> - you can find the <code>config</code> files in the <code>work/01/</code> and <code>work/03/</code> folders of this session.</p></li><li><p><strong>lwip, zydis, libelf libs</strong> - we have to clone all the repos coresponding to the previously mentioned libraries into the libs folder.
+All of them have to be on the <code>staging</code> branch.</p><ul><li><a href=https://github.com/unikraft/lwip.git>lwip</a></li><li><a href=https://github.com/unikraft/lib-zydis.git>zydis</a></li><li><a href=https://github.com/unikraft/lib-libelf.git>libelf</a></li></ul></li><li><p><strong>unikraft</strong> - the <a href=https://github.com/unikraft/unikraft>Unikraft repository</a> must also be cloned and checked out on the <code>usoc21</code> branch.</p></li></ul><p>These repositories are already cloned in the virtual machine, in the <code>~/syscall_shim-bincompat/</code> folder.</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>syscall_shim-bincompat/
 `-- apps/
 |   `-- app-elfloader/ [usoc21]
 `-- libs/
@@ -169,12 +180,12 @@ The final directory structure for this session should look like this:</p><div cl
 |   `-- zydis/ [staging]
 `-- unikraft/ [usoc21]
 </code></pre></div><h3 id=01-compiling-the-elf-loader-application>01. Compiling the ELF Loader Application</h3><p>The goal of this task is to make sure that our setup is correct.
-The first step is to copy the correct <code>.config</code> file into our application.</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>$ cp demo/01/config &lt;WORKDIR&gt;/apps/app-elfloader/.config
-</code></pre></div><p>To check that the config file is the correct one, go to the <code>app-elfloader/</code> directory and configure it:</p><ol><li><p>Change the directory to <code>&lt;WORKDIR>/apps/app-elfloader/</code>.</p></li><li><p>Run <code>make menuconfig</code></p></li><li><p>Select <code>library configuration</code>.
+The first step is to copy the correct <code>.config</code> file into our application.</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>$ cp ~/asplos22-tutorial/content/syscallshim_bin-bicompat/work/01/config ~/syscall_shim-bincompat/apps/app-elfloader/.config
+</code></pre></div><p>To check that the config file is the correct one, go to the <code>app-elfloader/</code> directory and configure it:</p><ol><li><p>Change the directory to <code>syscall_shim-bincompat/apps/app-elfloader/</code>.</p></li><li><p>Run <code>make menuconfig</code></p></li><li><p>Select <code>library configuration</code>.
 It should look like the below picture.
-Take a moment and inspect all the sub-menus, especially the syscall-shim one.</p><p><img src=images/config-image alt="Libraries configuration"></p></li></ol><p>If everything is correct, we can run <code>make</code> and the image for our unikernel should be compiled.
-In the <code>build</code> folder you should have the <code>elfloader_kvm-x86_64</code> binary.
-To also test if it runs correctly:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>.../&lt;WORKDIR&gt;/apps/app-elfloader$ qemu-guest -k build/elfloader_kvm-x86_64
+Take a moment and inspect all the sub-menus, especially the syscall-shim one.</p><p><img src=images/config-image.png alt="Libraries configuration"></p></li></ol><p>If everything is correct, we can run <code>make</code> and the image for our unikernel should be compiled.
+In the <code>build/</code> folder you should have the <code>elfloader_kvm-x86_64</code> binary.
+To also test if it runs correctly:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>.../apps/app-elfloader$ qemu-guest -k build/elfloader_kvm-x86_64
 
 SeaBIOS (version 1.10.2-1ubuntu1)
 Booting from ROM...
@@ -186,7 +197,7 @@ oOo oOO| | | | |   (| | | (_) |  _) :_
  OoOoO ._, ._:_:_,\_._,  .__,_:_, \___)
                   Tethys 0.5.0~825b1150
 [    0.105192] ERR:  &lt;0x3f20000&gt; [appelfloader] No image found (initrd parameter missing?)
-</code></pre></div><p>Because we did not pass an initial ramdisk, the loader does not have anything to load, so that&rsquo;s where the error comes from.</p><h3 id=02-compile-a-static-pie-executable-and-run-it-on-top-of-unikraft>02. Compile a Static-Pie Executable and Run It On Top of Unikraft</h3><p>The next step is to get an executable with the correct format.
+</code></pre></div><p>Because we did not pass an initial ramdisk, the loader does not have anything to load and prints the above error.</p><h3 id=02-compile-a-static-pie-executable-and-run-it-on-top-of-unikraft>02. Compile a Static-Pie Executable and Run It On Top of Unikraft</h3><p>The next step is to get an executable with the correct format.
 We require a static executable that is also PIE (<em>Position-Independent Executable</em>).</p><p>We go to the <code>apps/app-elfloader/example/helloworld</code> directory.
 We can see that the directory has a <code>helloworld.c</code> (a simple helloworld program) and a <code>Makefile</code>.
 The program will be compiled as a static PIE:</p><div class=highlight><pre class=chroma><code class=language-Makefile data-lang=Makefile><span class=nv>RM</span> <span class=o>=</span> rm -f
@@ -207,22 +218,21 @@ The program will be compiled as a static PIE:</p><div class=highlight><pre class
 
 <span class=nf>clean</span><span class=o>:</span>
 	<span class=k>$(</span>RM<span class=k>)</span> *.o *~ core helloworld
-</code></pre></div><p>We can now run <code>make</code> so we can get the <code>helloworld</code> executable:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>.../&lt;WORKDIR&gt;/apps/app-elfloader/example/helloworld$ make
+</code></pre></div><p>We can now run <code>make</code> so we can get the <code>helloworld</code> executable:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>.../apps/app-elfloader/example/helloworld$ make
 gcc -O2 -g -fpie -c helloworld.c -o helloworld.o
 gcc -static-pie helloworld.o  -o helloworld
 
-.../&lt;WORKDIR&gt;/apps/app-elfloader/example/helloworld$ ldd helloworld
+.../apps/app-elfloader/example/helloworld$ ldd helloworld
 	statically linked
 
-.../&lt;WORKDIR&gt;/apps/app-elfloader/example/helloworld$ checksec helloworld
-[*] &#39;/home/daniel/Faculty/BachelorThesis/apps/app-elfloader/example/helloworld/helloworld&#39;
+.../apps/app-elfloader/example/helloworld$ checksec helloworld
     Arch:     amd64-64-little
     RELRO:    Full RELRO
     Stack:    Canary found
     NX:       NX enabled
     PIE:      PIE enabled
 </code></pre></div><p>We can see above from the <code>ldd</code> and <code>checksec</code> output that the <code>helloworld</code> executable is a static PIE.</p><p>Now, the last part is to pass this executable to our unikernel.
-We can use the <code>-i</code> option to pass the initial ramdisk to the virtual machine.</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>.../&lt;WORKDIR&gt;/apps/app-elfloader$ qemu-guest -k build/elfloader_kvm-x86_64 -i example/helloworld/helloworld
+We can use the <code>-i</code> option to pass the initial ramdisk to the virtual machine.</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>.../apps/app-elfloader$ qemu-guest -k build/elfloader_kvm-x86_64 -i example/helloworld/helloworld
 
 SeaBIOS (version 1.10.2-1ubuntu1)
 Booting from ROM...
@@ -234,12 +244,12 @@ oOo oOO| | | | |   (| | | (_) |  _) :_
  OoOoO ._, ._:_:_,\_._,  .__,_:_, \___)
                   Tethys 0.5.0~825b1150
 Hello world!
-</code></pre></div><p>We can see that the binary is successfully loaded and executed.</p><h3 id=03-diving-deeper>03. Diving Deeper</h3><p>Now that we saw how we can run an executable on top of Unikraft through binary compatibility, let&rsquo;s take a look at what happens behind the scenes.
-For this we have to compile the unikernel with debug printing.</p><p>Copy the <code>config_debug</code> file to our application folder:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>$ cp demo/03/config_debug &lt;WORKDIR&gt;/apps/app-elfloader/.config
-</code></pre></div><p>Now, recompile the unikernel:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>.../&lt;WORKDIR&gt;/apps/app-elfloader$ make properclean
+</code></pre></div><p>The binary is successfully loaded and executed.</p><h3 id=03-diving-deeper>03. Diving Deeper</h3><p>Now that we saw how we can run an executable on top of Unikraft through binary compatibility, let&rsquo;s take a look at what happens behind the scenes.
+For this we have to compile the unikernel with debug printing.</p><p>Copy the <code>config_debug</code> file to our application folder:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>$ cp ~/asplos22-tutorial/content/syscall_shim-bincompat/work/03/config_debug ~/syscall_shim-bincompat/apps/app-elfloader/.config
+</code></pre></div><p>Now, recompile the unikernel:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>.../apps/app-elfloader$ make properclean
 [...]
-.../&lt;WORKDIR&gt;/apps/app-elfloader$ make
-</code></pre></div><p>Now, let&rsquo;s rerun the previously compiled executable on top of Unikraft:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>.../&lt;WORKDIR&gt;/apps/app-elfloader$ qemu-guest -k build/elfloader_kvm-x86_64 -i example/helloworld/helloworld
+.../apps/app-elfloader$ make
+</code></pre></div><p>Now, let&rsquo;s rerun the previously compiled executable on top of Unikraft:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>.../apps/app-elfloader$ qemu-guest -k build/elfloader_kvm-x86_64 -i example/helloworld/helloworld
 
 SeaBIOS (version 1.10.2-1ubuntu1)
 Booting from ROM...
@@ -278,7 +288,7 @@ You can see the loading phase in the debug output:</p><div class=highlight><pre 
 Now all the debug messages come from an operation that happened in the binary.
 We can also now see the syscall shim layer in action:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>[libsyscall_shim] Binary system call request &#34;write&#34; (1) at ip:0x3851c21 (arg0=0x1, arg1=0x3c01640, ...)
 Hello world!
-</code></pre></div><p>In the above case, the binary used a <code>write</code> system call in order to write <em>Hello world!</em> to standard output.</p><h3 id=04-solve-the-missing-syscall>04. Solve the Missing Syscall</h3><p>For the last part of today&rsquo;s session we will try to run another binary on top of Unikraft.
+</code></pre></div><p>In the above case, the binary used a <code>write</code> system call in order to write <em>Hello world!</em> to standard output.</p><h3 id=04-solve-the-missing-syscall>04. Solve the Missing Syscall</h3><p>Let&rsquo;s try to run another binary on top of Unikraft.
 You can find the C program in the <code>04-missing-syscall/</code> directory.
 Try compiling it as static-pie and then run it on top of Unikraft.</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>[libsyscall_shim] Binary system call request &#34;getcpu&#34; (309) at ip:0x3851926 (arg0=0x3f1fc14, arg1=0x0, ...)
 [libsyscall_shim] syscall &#34;getcpu&#34; is not available
@@ -286,7 +296,7 @@ Try compiling it as static-pie and then run it on top of Unikraft.</p><div class
 Here we are in the binary, calling getcpu
 Getcpu returned: -1
 </code></pre></div><p>Your task is to print a debug message betweem the <code>Here we are in the binary</code> and <code>Getcpu returned</code> message above and also make the <code>sched_getcpu()</code> return 0.</p><p><strong>Hint 1</strong>: <a href=http://docs.unikraft.org/developers-app.html#syscall-shim-layer>Syscall Shim Layer</a></p><p><strong>Hint 2</strong>: Check the <code>brk.c</code>, <code>Makefile.uk</code> and <code>exportsyms.uk</code> files in the <code>app-elfloader</code> directory.
-You do not have to use <code>UK_LLSYSCALL_R_DEFINE</code>, instead, use the two other macros previously described in the session (eg. <code>UK_SYSCALL_DEFINE</code> and <code>UK_SYSCALL_R_DEFINE</code>).</p><h3 id=05-inspect-the-program-flow-of-an-application>05. Inspect the program flow of an application.</h3><p>Take the above C program and compile it dirrectly into Unikraft.
-Inspect the flow of the program, see how we get from the application code to the library code and then to the unikernel code.
-After you see all the functions that get called, modify you program to skip the library code but still keep the same functionality.</p><p><strong>Hint 1</strong>: You should call a function that is generated with the syscall shim macros.</p><h3 id=06-give-us-feedback>06. Give Us Feedback</h3><p>We want to know how to make the next sessions better. For this we need your <a href=https://forms.gle/cY75bQ3x4wdpxWKKA>feedback</a>. Thank you!</p><h2 id=further-reading>Further Reading</h2><p><a href=https://dtrugman.medium.com/elf-loaders-libraries-and-executables-on-linux-e5cfce318f94>Elf Loaders, Libraries and Executables on Linux</a></p></div></div></div></div></div></div><footer class=sub-footer><div class="container py-5"><div class=row><div class="col-12 col-md">Unikraft
+You do not have to use <code>UK_LLSYSCALL_R_DEFINE</code>, instead, use the two other macros previously described in the session (eg. <code>UK_SYSCALL_DEFINE</code> and <code>UK_SYSCALL_R_DEFINE</code>).</p><h3 id=05-load-the-binary-from-the-filesystem>05. Load the Binary from the Filesystem</h3><p>Up until now, we passed the binary as an initial ramdisk image.
+We aimt to pass it as a file in a mounted filesytem.</p><p>Create a folder, copy executable files in that folder and mount it using 9pfs support.
+The open the file in <code>main.c</code> annd load it.</p><p><strong>Hint</strong>: Check the filesystem work items in the <a href=../a-look-inside/>&ldquo;Inside the config and build system&rdquo; session</a>.</p><h2 id=further-reading>Further Reading</h2><p><a href=https://dtrugman.medium.com/elf-loaders-libraries-and-executables-on-linux-e5cfce318f94>Elf Loaders, Libraries and Executables on Linux</a></p></div></div></div></div></div></div><footer class=sub-footer><div class="container py-5"><div class=row><div class="col-12 col-md">Unikraft
 <small class="d-block mb-3 text-muted">© 2021</small></div><div class="col-6 col-md"><h5>Social</h5><ul class="list-unstyled text-small"><li><a class=text-muted href=https://twitter.com/UnikraftSDK>Twitter</a></li><li><a class=text-muted href=https://www.linkedin.com/company/unikraft-sdk/>LinkedIn</a></li></ul></div><div class="col-6 col-md"><h5>&nbsp;</h5><ul class="list-unstyled text-small"><li><a class=text-muted href=https://bit.ly/UnikraftDiscord>Discord</a></li><li><a class=text-muted href=https://github.com/unikraft/unikraft>GitHub</a></li></ul></div><div class="col-6 col-md"><h5>Resources</h5><ul class="list-unstyled text-small"><li><a class=text-muted href=https://unikraft.org>Unikraft Homepage</a></li><li><a class=text-muted href=https://unikraft.io>Unikraft Cloud</a></li></ul></div><div class="col-6 col-md"><h5>&nbsp;</h5><ul class="list-unstyled text-small"><li><a class=text-muted href=http://docs.unikraft.org>Documentation</a></li><li><a class=text-muted href=https://unikraft.org/license/>Open-Source Licenses</a></li></ul></div></div></footer></div><script type=text/javascript src=/js/scripts.min.eaf147370baecdd07c022597db631f99cab1c9cd6479de586f30327a568d6a0f.js></script></body></html>
