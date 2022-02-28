@@ -84,7 +84,7 @@ For this session, a template has been provided which contains some basic buildin
 Start by making a copy of it:
 
 ```sh
-$ cp -a sol/pktgen path/to/your/copy
+$ cp -a ~/asplos22-tutorial/content/high-performance/sol/pktgen path/to/your/copy
 ```
 
 Go into your copy and initialize it with `kraft`:
