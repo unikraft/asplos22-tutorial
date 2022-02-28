@@ -182,7 +182,7 @@ so your transmit code should look like this:</p><div class=highlight><pre class=
 	<span class=n>uk_netbuf_free</span><span class=p>(</span><span class=n>pkt</span><span class=p>);</span>
 <span class=p>}</span>
 
-<span class=cm>/* Do not touch pkt here anymore */</span>
+<span class=cm>/* Do not touch pkt here anymore, on success uk_netdev_tx_one clears the memory  */</span>
 <span class=cm>/* &lt;...&gt; */</span>
 </code></pre></div><p>In order to see if everything works, attach <code>tshark</code> or <code>tcpdump</code> on your Linux host to <code>asplosbr0</code> on a second terminal:</p><div class=highlight><pre class=chroma><code class=language-sh data-lang=sh>$ tshark -i asplosbr0
 </code></pre></div><p>Whenever you launch your unikernel, you should be able to see the UDP packet:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>    3 1.050213439 192.168.128.1 → 192.168.128.254 UDP 60 5001 → 5001 Len=18
@@ -249,27 +249,8 @@ The transmit function will return an error.</p></li></ol><p>Besides these option
 Instead of sending one packet at a time, you send multiple ones at once.
 The advantage is that the device backend is notified just once per batch instead of for each packet.(less context switches)
 This reduces communication overhead.
-This feature is currently submitted as <a href=https://github.com/unikraft/unikraft/pull/243>PR#243</a> and will be added in the near future.</p><p>In order to understand better the bottlenecks in our implementation, we can isolate the code from the netdev device bottlenecks.
-This is done by replacing the send operation with <code>uk_netbuf_free()</code>.
-There we can assume that this means that every transmit operation works but this reveals more dominantly performance differences of the suggestions 1-5 ahead.
-Go over the list again and note the new collected rates.
-Which option results in the best performance?</p><p><strong>Recommendation</strong>: The pre-processor can help you switching between these two modes quickly:</p><div class=highlight><pre class=chroma><code class=language-c data-lang=c><span class=cp>#if 0</span><span class=c> /* &lt;-- toggle between these two blocks with 0 and 1 */
-</span><span class=c>	status = uk_netdev_tx_one(netif, 0, pkt);
-</span><span class=c>	if (uk_netdev_status_successful(status)) {
-</span><span class=c>		/* success */
-</span><span class=c>		total_nb_pkts += 1;
-</span><span class=c>		total_nb_bytes += 60 /* pktlen */ + 24;
-</span><span class=c>	} else {
-</span><span class=c>		/* failed */
-</span><span class=c>		uk_netbuf_free(pkt);
-</span><span class=c>	}
-</span><span class=c></span><span class=cp>#else
-</span><span class=cp></span>	<span class=n>uk_netbuf_free</span><span class=p>(</span><span class=n>pkt</span><span class=p>);</span>
-	<span class=cm>/* always success */</span>
-	<span class=n>total_nb_pkts</span> <span class=o>+=</span> <span class=mi>1</span><span class=p>;</span>
-	<span class=n>total_nb_bytes</span> <span class=o>+=</span> <span class=mi>60</span> <span class=cm>/* pktlen */</span> <span class=o>+</span> <span class=mi>24</span><span class=p>;</span>
-<span class=cp>#endif
-</span></code></pre></div><h4 id=061-use-a-memory-pool>06.1. Use a memory pool</h4><p>We provide a pool allocator library with Unikraft: <code>libukallocpool</code>.
+This feature is currently submitted as <a href=https://github.com/unikraft/unikraft/pull/243>PR#243</a> and will be added in the near future. We&rsquo;ll not be using
+this optimization today, but is good to know about it.</p><p>Which option increased the performance the most?</p><p><strong>Recommendation</strong>: The pre-processor can help you switching between these two modes quickly:</p><h4 id=061-use-a-memory-pool>06.1. Use a memory pool</h4><p>We provide a pool allocator library with Unikraft: <code>libukallocpool</code>.
 First of all, add a dependency to this library in your <code>Config.uk</code>:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>depends on LIBUKALLOCPOOL
 </code></pre></div><p>This dependency makes the header <code>"&lt;uk/allocpool.h>"</code> (within <code>[PATH-TO-UNIKRAFT]/lib/ukallocpool/include/uk/</code>) available.</p><p>In order to allocate one pool, you call <code>uk_allocpool_alloc()</code> at your application startup.
 The function will allocate the pool memory from a parent allocator.
@@ -314,7 +295,7 @@ The function should look like this:</p><div class=highlight><pre class=chroma><c
 	<span class=p>}</span>
 	<span class=k>return</span> <span class=n>i</span><span class=p>;</span>
 <span class=p>}</span>
-</code></pre></div><p>Please note that this function expects that we initialized the global variables <code>netdev_info</code> and <code>p</code> before we configure the receive queue.</p><p>Now you should be able to build the polling receive loop based on the following snippet:</p><div class=highlight><pre class=chroma><code class=language-c data-lang=c><span class=n>status</span> <span class=o>=</span> <span class=n>uk_netdev_rx_one</span><span class=p>(</span><span class=n>netdev</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>pkt</span><span class=p>);</span>
+</code></pre></div><p>Please note that this function expects that we initialized the global variables <code>netdev_info</code> and <code>p</code> before we configure the receive queue.</p><p>Now you should be able to build the polling receive loop based on the following snippet:</p><div class=highlight><pre class=chroma><code class=language-c data-lang=c><span class=n>status</span> <span class=o>=</span> <span class=n>uk_netdev_rx_one</span><span class=p>(</span><span class=n>dev</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>pkt</span><span class=p>);</span>
 <span class=k>if</span> <span class=p>(</span><span class=n>uk_netdev_status_successful</span><span class=p>(</span><span class=n>status</span><span class=p>))</span> <span class=p>{</span>
 	<span class=cm>/* count packet and bytes and free received packet */</span>
 	<span class=n>nb_total_pkts</span> <span class=o>+=</span> <span class=mi>1</span><span class=p>;</span>
