@@ -218,7 +218,7 @@ We could do a cheap modulo operation by using a bitmask, for example:</p><div cl
 </code></pre></div><p>Instrument your code with the two statistics variables and implement one of the mentioned printing mechanisms.
 We should roughly print not faster than every <code>2</code> seconds, ideal are roughly <code>5</code>-<code>10</code> second intervals.
 Remember, if your rate goes up or down with one of the following experiments, you may need to revisit your chosen value and adopt this <code>n</code>th packet parameter again.</p><h3 id=06-optimizing-for-even-more-performance>06. Optimizing for even more performance</h3><p>Now, we have can go through some options to play around with.</p><p>Our overall goal is to get the packet rate of our packer generator as high as possible.
-Note your rate and bandwidth before and, after each of the steps because we are going over this list twice, make sure that you do the steps non-destructive and keep the code of each step.</p><ol><li><p><strong>Try compiler options</strong>: Enable <em>Link Time Optimizations</em> (LTO) and <em>Dead Code Elimitation</em> (DCE) within <code>Build Options</code> of the <code>menuconfig</code>.
+Note your rate and bandwidth before and, after each of the optimization steps because, make sure that you do the steps non-destructive and keep the code of each step.</p><ol><li><p><strong>Try compiler options</strong>: Enable <em>Link Time Optimizations</em> (LTO) and <em>Dead Code Elimitation</em> (DCE) within <code>Build Options</code> of the <code>menuconfig</code>.
 The compiler reconsiders a second time optimizations like function inlining while linking the final binary;
 actually over the whole code base at once again.
 These optimizations can have some visible effect on your packet rate.
@@ -250,9 +250,9 @@ Instead of sending one packet at a time, you send multiple ones at once.
 The advantage is that the device backend is notified just once per batch instead of for each packet.(less context switches)
 This reduces communication overhead.
 This feature is currently submitted as <a href=https://github.com/unikraft/unikraft/pull/243>PR#243</a> and will be added in the near future. We&rsquo;ll not be using
-this optimization today, but is good to know about it.</p><p>Which option increased the performance the most?</p><p><strong>Recommendation</strong>: The pre-processor can help you switching between these two modes quickly:</p><h4 id=061-use-a-memory-pool>06.1. Use a memory pool</h4><p>We provide a pool allocator library with Unikraft: <code>libukallocpool</code>.
+this optimization today, but is good to know about it.</p><p>Which option increased the performance the most?</p><h4 id=061-use-a-memory-pool>06.1. Use a memory pool</h4><p>We provide a pool allocator library with Unikraft: <code>libukallocpool</code>.
 First of all, add a dependency to this library in your <code>Config.uk</code>:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>depends on LIBUKALLOCPOOL
-</code></pre></div><p>This dependency makes the header <code>"&lt;uk/allocpool.h>"</code> (within <code>[PATH-TO-UNIKRAFT]/lib/ukallocpool/include/uk/</code>) available.</p><p>In order to allocate one pool, you call <code>uk_allocpool_alloc()</code> at your application startup.
+</code></pre></div><p>This dependency makes the header <a href=https://github.com/unikraft/unikraft/blob/staging/lib/ukallocpool/include/uk/allocpool.h><code>"&lt;uk/allocpool.h>"</code></a> available.</p><p>In order to allocate one pool, you call <code>uk_allocpool_alloc()</code> at your application startup.
 The function will allocate the pool memory from a parent allocator.
 This happens just during creation time for pre-allocating all the pool objects.</p><p>In our case this parent is the default allocator.
 As <code>obj_len</code> you should choose <code>2048</code> because this is a big enough buffer to keep packet data and needed meta data.
@@ -265,8 +265,8 @@ You can try different values, start with <code>1024</code>.</p><div class=highli
 </code></pre></div><p>In order to use the pool as allocator for <code>pktgen_udp4()</code> and <code>uk_netbuf_dup_single()</code>, you need to get the compatibility interface from libukallocpool:</p><div class=highlight><pre class=chroma><code class=language-C data-lang=C><span class=k>struct</span> <span class=n>uk_alloc</span> <span class=o>*</span><span class=n>p</span><span class=p>;</span>
 
 <span class=n>p</span> <span class=o>=</span> <span class=n>uk_allocpool2ukalloc</span><span class=p>(</span><span class=n>pool</span><span class=p>);</span>
-</code></pre></div><p><code>p</code> can then be handed over as normal allocator, like <code>uk_alloc_get_default()</code>.
-<code>p</code> will always return 2048B objects as long as the malloc request is smaller or equal to the initialized <code>obj_len</code>.
+</code></pre></div><p><code>p</code> can then be handed over as normal allocator, simply replace all the calls to <code>uk_alloc_get_default()</code> with <code>p</code>.
+<strong>Note</strong>.<code>p</code> will always return 2048B objects as long as the malloc request is smaller or equal to the initialized <code>obj_len</code>.
 Any bigger allocation request cannot be satisfied and libukallocpool is returning <code>NULL</code>.</p><h3 id=07-receiver-unikernel>07. Receiver unikernel</h3><p>With the last task you will implement a receive-only unikernel that measures the received traffic.
 We keep busy polling for receive as well but you should implement a switching logic to switch between transmit and receive mode.
 You can do this either with a configuration option (<code>Config.uk</code>) or with a kernel argument (see: <code>int argc, char *argv[]</code>).</p><p>Opening the network device is the same for receive except that we implement and hand-over a proper receive buffer allocation function.
