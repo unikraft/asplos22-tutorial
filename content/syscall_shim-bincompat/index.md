@@ -1,5 +1,5 @@
 ---
-title: syscall_shim and bincompat
+title: Syscall Shim and Binary Compatibility Layer
 date: 2019-02-11T19:27:37+10:00
 weight: 5
 summary: We use the syscall shim layer to run unmodified (binary) applications. Expected time 60mn.
@@ -143,12 +143,12 @@ Program Headers:
    07     .tdata .init_array .fini_array .data.rel.ro .dynamic .got
 ```
 
-As an overview of the whole process, when we want to run an application on Unikraft using binary compatibility, the first step is to pass the application to the unikernel as an initial ram disk.
+As an overview of the whole process, when we want to run an application on Unikraft using binary compatibility, the first step is to pass the application to the unikernel as an initial ramdisk.
 Once the unikernel gets the application, the loader reads the executable segments and loads them accordingly.
 After the program is loaded, the last step is to jump to its entry point and start executing.
 
 The loader that we currently have implemented in Unikraft only supports executables that are static (so all the libraries are part of the executables) and also position-independent.
-A position independent binary is a binary that can run correctly independent of the address at which it was loaded.
+A position independent binary (PIE) is a binary that can run correctly independent of the address at which it was loaded.
 So we need executables that are built using the `-static-pie` compiler / linker option, available in GCC since version 8.
 
 ### 02. Unikraft Syscall Shim
@@ -168,9 +168,39 @@ syscall		    ; call kernel
 In this case, when the `syscall` instruction gets executed, we have to reach the write function inside our unikernel.
 In our case, when the `syscall` instruction gets called there are a few steps taken until we reach the **system call** inside Unikraft:
 
-1. After the `syscall` instruction gets executed we reach the `ukplat_syscall_handler`.
-   This function has an intermediate role, printing some debug messages and passing the correct parameters further down.
+1. The `_ukplat_syscall` function is the handler attached to system call instructions.
+   See [the source code](https://github.com/unikraft/unikraft/blob/staging/plat/common/include/x86/cpu.h#L274).
+   Whenever the `syscall` instruction is executed, control is passed to the `_ukplat_syscall` function.
+
+   ```
+   static inline void _init_syscall(void)
+   {
+   	[...]
+   	wrmsrl(X86_MSR_LSTAR,
+   	       (__uptr) _ukplat_syscall);
+   	[...]
+   ```
+
+1. After some preparatory actions, `_ukplat_syscall` calls `ukplat_syscall_handler`.
+   See [the source code](https://github.com/unikraft/unikraft/blob/staging/plat/common/x86/syscall.S#L38).
+
+   ```
+   ENTRY(_ukplat_syscall)
+   	[...]
+   	/*
+   	 * Handle call
+   	 * NOTE: Handler function is going to modify saved registers state
+   	 * NOTE: Stack pointer as "struct __regs *" argument
+   	 *       (calling convention: 1st arg on %rdi)
+   	 */
+   	movq %rsp, %rdi
+   	call ukplat_syscall_handler
+   	[...]
+   ```
+
+   `ukplat_syscall_handler` is also an intermediary function, printing some debug messages and passing the correct parameters further down.
    The next function that gets called is the `uk_syscall6_r` function.
+   See [the source code](https://github.com/unikraft/unikraft/blob/staging/lib/syscall_shim/uk_syscall6_r.c.in_end#L7).
 
    ```
    void ukplat_syscall_handler(struct __regs *r)
@@ -187,6 +217,7 @@ In our case, when the `syscall` instruction gets called there are a few steps ta
    ```
 
 1. The `uk_syscall6_r` is the function that redirects the flow of the program to the actual **system call** function inside the kernel.
+   See [the generated source code](https://github.com/unikraft/unikraft/blob/staging/lib/syscall_shim/gen_uk_syscall6_r.awk#L16).
 
    ```
    switch (nr) {
@@ -289,30 +320,19 @@ So, in our case:
 The binary compatibility layer is a very important part of the Unikraft unikernel.
 It helps us run applications that were not build for Unikraft while, at the same time, keeps the classic benefits of Unikraft: speed, security and small memory footprint.
 
-## Practical Work
+## Work Items
 
 ### Support Files
 
-Session support files are available [in the repository](https://github.com/unikraft/summer-of-code-2021).
-If you already cloned the repository, update it and enter the session directory:
+Session support files are available [in the repository](https://github.com/unikraft/asplos22-tutorial).
+The repository is already cloned in the virtual machine.
+
+If you want to clone the repository yourself, do
 
 ```
-$ cd path/to/repository/clone
+$ git clone https://github.com/unikraft/asplos22-tutorial
 
-$ git pull --rebase
-
-$ cd content/en/syscall_shim-bincompat/
-
-$ ls -F
-demo/  images/  index.md  work/
-```
-
-If you haven't cloned the repository yet, clone it and enter the session directory:
-
-```
-$ git clone https://github.com/unikraft/summer-of-code-2021
-
-$ cd content/en/syscall_shim-bincompat/
+$ cd asplos22-tutorial/content/syscall_shim-bincompat/
 
 $ ls -F
 demo/  images/  index.md  work/
@@ -328,7 +348,7 @@ For the practical work we will need the following prerequisites:
   You can clone the [ELF Loader repository](https://github.com/skuenzer/app-elfloader/), on the `usoc21` branch.
   This cloned repo should go into the `apps` folder in your Unikraft directory structure.
 
-* **the configuration file** - you can find the `config` files in the `demo/01` and `demo/03` folder of this session.
+* **the configuration file** - you can find the `config` files in the `work/01/` and `work/03/` folders of this session.
 
 * **lwip, zydis, libelf libs** - we have to clone all the repos coresponding to the previously mentioned libraries into the libs folder.
   All of them have to be on the `staging` branch.
@@ -338,12 +358,10 @@ For the practical work we will need the following prerequisites:
 
 * **unikraft** - the [Unikraft repository](https://github.com/unikraft/unikraft) must also be cloned and checked out on the `usoc21` branch.
 
-Set the repositories in a directory of your choosing.
-We'll call this directory `<WORKDIR>`.
-The final directory structure for this session should look like this:
+These repositories are already cloned in the virtual machine, in the `~/syscall_shim-bincompat/` folder.
 
 ```
-workdir/
+syscall_shim-bincompat/
 `-- apps/
 |   `-- app-elfloader/ [usoc21]
 `-- libs/
@@ -359,25 +377,25 @@ The goal of this task is to make sure that our setup is correct.
 The first step is to copy the correct `.config` file into our application.
 
 ```
-$ cp demo/01/config <WORKDIR>/apps/app-elfloader/.config
+$ cp ~/asplos22-tutorial/content/syscallshim_bin-bicompat/work/01/config ~/syscall_shim-bincompat/apps/app-elfloader/.config
 ```
 
 To check that the config file is the correct one, go to the `app-elfloader/` directory and configure it:
 
-1. Change the directory to `<WORKDIR>/apps/app-elfloader/`.
+1. Change the directory to `syscall_shim-bincompat/apps/app-elfloader/`.
 1. Run `make menuconfig`
 1. Select `library configuration`.
    It should look like the below picture.
    Take a moment and inspect all the sub-menus, especially the syscall-shim one.
 
-   ![Libraries configuration](images/config-image)
+   ![Libraries configuration](images/config-image.png)
 
 If everything is correct, we can run `make` and the image for our unikernel should be compiled.
-In the `build` folder you should have the `elfloader_kvm-x86_64` binary.
+In the `build/` folder you should have the `elfloader_kvm-x86_64` binary.
 To also test if it runs correctly:
 
 ```
-.../<WORKDIR>/apps/app-elfloader$ qemu-guest -k build/elfloader_kvm-x86_64
+.../apps/app-elfloader$ qemu-guest -k build/elfloader_kvm-x86_64
 
 SeaBIOS (version 1.10.2-1ubuntu1)
 Booting from ROM...
@@ -391,7 +409,7 @@ oOo oOO| | | | |   (| | | (_) |  _) :_
 [    0.105192] ERR:  <0x3f20000> [appelfloader] No image found (initrd parameter missing?)
 ```
 
-Because we did not pass an initial ramdisk, the loader does not have anything to load, so that's where the error comes from.
+Because we did not pass an initial ramdisk, the loader does not have anything to load and prints the above error.
 
 ### 02. Compile a Static-Pie Executable and Run It On Top of Unikraft
 
@@ -426,15 +444,14 @@ clean:
 We can now run `make` so we can get the `helloworld` executable:
 
 ```
-.../<WORKDIR>/apps/app-elfloader/example/helloworld$ make
+.../apps/app-elfloader/example/helloworld$ make
 gcc -O2 -g -fpie -c helloworld.c -o helloworld.o
 gcc -static-pie helloworld.o  -o helloworld
 
-.../<WORKDIR>/apps/app-elfloader/example/helloworld$ ldd helloworld
+.../apps/app-elfloader/example/helloworld$ ldd helloworld
 	statically linked
 
-.../<WORKDIR>/apps/app-elfloader/example/helloworld$ checksec helloworld
-[*] '/home/daniel/Faculty/BachelorThesis/apps/app-elfloader/example/helloworld/helloworld'
+.../apps/app-elfloader/example/helloworld$ checksec helloworld
     Arch:     amd64-64-little
     RELRO:    Full RELRO
     Stack:    Canary found
@@ -448,7 +465,7 @@ Now, the last part is to pass this executable to our unikernel.
 We can use the `-i` option to pass the initial ramdisk to the virtual machine.
 
 ```
-.../<WORKDIR>/apps/app-elfloader$ qemu-guest -k build/elfloader_kvm-x86_64 -i example/helloworld/helloworld
+.../apps/app-elfloader$ qemu-guest -k build/elfloader_kvm-x86_64 -i example/helloworld/helloworld
 
 SeaBIOS (version 1.10.2-1ubuntu1)
 Booting from ROM...
@@ -462,7 +479,7 @@ oOo oOO| | | | |   (| | | (_) |  _) :_
 Hello world!
 ```
 
-We can see that the binary is successfully loaded and executed.
+The binary is successfully loaded and executed.
 
 ### 03. Diving Deeper
 
@@ -472,21 +489,21 @@ For this we have to compile the unikernel with debug printing.
 Copy the `config_debug` file to our application folder:
 
 ```
-$ cp demo/03/config_debug <WORKDIR>/apps/app-elfloader/.config
+$ cp ~/asplos22-tutorial/content/syscall_shim-bincompat/work/03/config_debug ~/syscall_shim-bincompat/apps/app-elfloader/.config
 ```
 
 Now, recompile the unikernel:
 
 ```
-.../<WORKDIR>/apps/app-elfloader$ make properclean
+.../apps/app-elfloader$ make properclean
 [...]
-.../<WORKDIR>/apps/app-elfloader$ make
+.../apps/app-elfloader$ make
 ```
 
 Now, let's rerun the previously compiled executable on top of Unikraft:
 
 ```
-.../<WORKDIR>/apps/app-elfloader$ qemu-guest -k build/elfloader_kvm-x86_64 -i example/helloworld/helloworld
+.../apps/app-elfloader$ qemu-guest -k build/elfloader_kvm-x86_64 -i example/helloworld/helloworld
 
 SeaBIOS (version 1.10.2-1ubuntu1)
 Booting from ROM...
@@ -553,7 +570,7 @@ In the above case, the binary used a `write` system call in order to write *Hell
 
 ### 04. Solve the Missing Syscall
 
-For the last part of today's session we will try to run another binary on top of Unikraft.
+Let's try to run another binary on top of Unikraft.
 You can find the C program in the `04-missing-syscall/` directory.
 Try compiling it as static-pie and then run it on top of Unikraft.
 
@@ -572,17 +589,15 @@ Your task is to print a debug message betweem the `Here we are in the binary` an
 **Hint 2**: Check the `brk.c`, `Makefile.uk` and `exportsyms.uk` files in the `app-elfloader` directory.
 You do not have to use `UK_LLSYSCALL_R_DEFINE`, instead, use the two other macros previously described in the session (eg. `UK_SYSCALL_DEFINE` and `UK_SYSCALL_R_DEFINE`).
 
-### 05. Inspect the program flow of an application.
+### 05. Load the Binary from the Filesystem
 
-Take the above C program and compile it dirrectly into Unikraft.
-Inspect the flow of the program, see how we get from the application code to the library code and then to the unikernel code.
-After you see all the functions that get called, modify you program to skip the library code but still keep the same functionality.
+Up until now, we passed the binary as an initial ramdisk image.
+We aimt to pass it as a file in a mounted filesytem.
 
-**Hint 1**: You should call a function that is generated with the syscall shim macros.
+Create a folder, copy executable files in that folder and mount it using 9pfs support.
+The open the file in `main.c` annd load it.
 
-### 06. Give Us Feedback
-
-We want to know how to make the next sessions better. For this we need your [feedback](https://forms.gle/cY75bQ3x4wdpxWKKA). Thank you!
+**Hint**: Check the filesystem work items in the ["Inside the config and build system" session](../a-look-inside/).
 
 ## Further Reading
 
