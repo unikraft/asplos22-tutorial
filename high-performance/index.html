@@ -1,0 +1,326 @@
+<!doctype html><html lang=en><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><title>High performance applications - ASPLOS'22 Tutorial</title><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Unikraft ASPLOS'22 Tutorial"><meta property="og:title" content="Unikraft ASPLOS'22 Tutorial"><meta property="og:type" content="website"><meta property="og:url" content="https://asplos22.unikraft.org"><meta property="og:description" content="ASPLOS'22 Tutorial on Unikraft: educating the community on unikernels, libOSes, and particularly Unikraft."><meta name=twitter:card content="summary"><meta name=twitter:site content="@UnikraftSDK"><meta name=twitter:creator content="@UnikraftSDK"><link rel=icon href=/favicon.png><link rel=stylesheet href=/css/style.min.9d91cadd6bf9a027131051416b1155705f1a4ce3735fcdef7072384726bf9590.css></head><body class="page page-default-single"><div id=main-menu-mobile class=main-menu-mobile><ul><li class="menu-item-learn more about unikraft"><a href=https://unikraft.org><span>Learn more about Unikraft</span></a></li></ul></div><div class=wrapper><div class=header><div class=container><div class=logo><a href=/><img alt=Logo src=/images/unikraft.svg>
+<span>ASPLOS'22 Tutorial</span></a></div><div class=logo-mobile><a href=/><img alt=Logo src=/images/unikraft.svg>
+<span>ASPLOS'22 Tutorial</span></a></div><div id=main-menu class=main-menu><ul><li class="menu-item-learn more about unikraft"><a href=https://unikraft.org><span>Learn more about Unikraft</span></a></li></ul></div><button id=toggle-main-menu-mobile class="hamburger hamburger--slider" type=button>
+<span class=hamburger-box><span class=hamburger-inner></span></span></button></div></div><div class="container pt-2 pt-md-4 pb-3 pb-md-6"><div class=row><div class="col-12 col-md-3 mb-3"><div class=sidebar><div class=docs-menu><h4></h4><ul><li><a href=/intro/>Introduction to Unikraft</a></li><li><a href=/getting-started/>Getting started with Unikraft</a></li><li><a href=/a-look-inside/>Inside the config and build system</a></li><li><a href=/complex-apps/>Running complex applications</a></li><li><a href=/syscall_shim-bincompat/>syscall_shim and bincompat</a></li><li class=active><a href=/high-performance/>High performance applications</a></li><li><a href=/current-research-and-dev/>Research and development</a></li><li><a href=/people/>People</a></li></ul></div></div></div><div class="col-12 col-md-9"><h1 class=title>High performance applications</h1><div class=content><h2 id=requirements>Requirements</h2><p>In this session we will be making a high performance UDP packet generation application. We will be using <code>tshark</code> and <code>tcpdump</code> to analyse and debug our implementation. The VM that we provide you access to already has these packages installed.</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>$ sudo apt-get -y install qemu-kvm qemu-system-x86 sgabios socat bridge-utils ifupdown tshark tcpdump
+</code></pre></div><p>We also need to enable the <code>br_netfilter</code> kernel module.</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>sudo modprobe br_netfilter
+</code></pre></div><h2 id=overview>Overview</h2><p>We now turn our attention to what unikernels excel at, performance. We will introduce to you how to develop highly specialized and performance-optimized unikernels with Unikraft. So far, we have focused on applications and POSIX compatibility; where it is important to provide the same set of APIs and system calls that your application uses on its original environment (i.e., as a Linux user space application). We achieve this by stacking multiple micro-libraries which then assemble together to form a combination of various necessary “higher-level” APIs.</p><p>In this session we will be looking into networking applications, but the idea presented today is general and can be used to speedup many applications, such as memory disaggregation, filesystem operations implementation and many more. In the context of network-based applications, we would typically develop network functionality based on the <code>sockets API</code>. This requires the following library stack being available within Unikraft for the socket (and friends) API to interface with the virtual Network Interface Card (vNIC):</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback> .-------------------------.
+(     Socket application    )
+ &#39;-------------------------&#39;
+              |
+              V
++---------------------------+
+|         libvfscore        |
++---------------------------+
++---------------------------+
+|          liblwip          |
++---------------------------+
++---------------------------+
+|        libuknetdev        |
++---------------------------+
++---------------------------+
+|        libkvmplat         |
++---------------------------+
+              |
+              V
+ .-------------------------.
+( Virtual Network Interface )
+ &#39;-------------------------&#39;
+</code></pre></div><p>Especially the Virtual File System (VFS) layer (provided by libvfscore) and the TCP/IP network stack (provided by liblwip) are complex subsystems which can introduce additional overheard.</p><p>For high-performance Network Functions (NFs), it is often more efficient to bypass any OS component and interact with the driver or hardware as directly; cutting out any indirection. A well known framework used to bypass kernel netowrking is Intel DPDK which operates network card drivers in Linux user space using <code>vfio</code> or <code>uio</code>. It operates in user space in order to avoid interactions with the kernel which comes with performance penalties resulting from additional permission checks. Despite this advantage in performance, you still need to maintain and operate a complete Linux environment in production deployments. Further, DPDK requires at least one dedicated core for pooling.</p><p>Back to our unikernel, we now try to increase the performance by reducing the number of indirections. In the case with Unikraft, we can configure the libraries to be minimal and can, similar to Intel DPDK, directly develop our NF on top of network drivers API.</p><p>In this scenario, our library stack does look like the following:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback> .-------------------------.
+(    High performance NF    )
+ &#39;-------------------------&#39;
+              |
+              V
++---------------------------+
+|        libuknetdev        |
++---------------------------+
++---------------------------+
+|        libkvmplat         |
++---------------------------+
+              |
+              V
+ .-------------------------.
+( Virtual Network Interface )
+ &#39;-------------------------&#39;
+</code></pre></div><p>In the following tutorial, you will develop a simple, high performance network packet generator. This tutorial will guide you through various options and possibilities which can help you during the development of more complex NFs with Unikraft.</p><h2 id=work-items>Work Items</h2><h3 id=01-getting-started>01. Getting Started</h3><p>For this session, a template has been provided which contains some basic building blocks (like crafting a IPv4/UDP packet) for our high performance NF.
+Start by making a copy of it:</p><div class=highlight><pre class=chroma><code class=language-sh data-lang=sh>$ cp -a sol/pktgen path/to/your/copy
+</code></pre></div><p>Go into your copy and initialize it with <code>kraft</code>:</p><div class=highlight><pre class=chroma><code class=language-sh data-lang=sh>$ <span class=nb>cd</span> path/to/your/copy
+$ kraft list update
+$ kraft list pull
+$ kraft configure
+$ kraft build
+</code></pre></div><p>Check if the image runs and prints the Unikraft banner:</p><div class=highlight><pre class=chroma><code class=language-sh data-lang=sh>$ kraft run
+</code></pre></div><h3 id=02-bring-up-a-network-interface>02. Bring Up a Network Interface</h3><p>We can directly interact with network device drivers which are typically provided by each platform using Unikraft&rsquo;s internal <a href=https://github.com/unikraft/unikraft/tree/staging/lib/uknetdev><code>uknetdev</code></a> API.
+First, make sure that we state a dependency of our application to <code>libuknetdev</code>.
+To do this, open <code>Config.uk</code> and place the following dependency accordingly in the file (if not already there): <code>depends on LIBUKNETDEV</code>.</p><p>This dependency gives us access to the <code>&lt;uk/netdev.h></code> and <code>&lt;uk/netbuf.h></code> headers which are available within the <code>libuknetdev</code> library:</p><div class=highlight><pre class=chroma><code class=language-sh data-lang=sh>$ ls <span class=o>[</span>PATH-TO-UNIKRAFT<span class=o>]</span>/lib/uknetdev/include/uk/
+</code></pre></div><p>As described in <code>&lt;uk/netdev.h></code>, bringing up a network interface means transition it through configuration states before we can use the interface for sending packets. We&rsquo;ll be
+editing the <code>main</code> function from <code>main.c</code>. Read the description of any function you encounter from <a href=https://github.com/unikraft/unikraft/blob/staging/lib/uknetdev/include/uk/netdev.h><code>netdev.h</code></a>.</p><ol><li><p>Check that the platform detected network interfaces.
+<a href=https://github.com/unikraft/unikraft/blob/staging/lib/uknetdev/include/uk/netdev.h#L80><code>uk_netdev_count()</code></a> should tell us how many interfaces are available.
+Please note that you should also check that the network driver is enabled in the platform configuration.
+For this session we are interested in <code>virtio-net</code> within <code>KVM guest</code>.</p><div class=highlight><pre class=chroma><code class=language-C data-lang=C><span class=k>if</span> <span class=p>(</span><span class=n>uk_netdev_count</span><span class=p>()</span> <span class=o>&lt;=</span> <span class=mi>0</span><span class=p>)</span> <span class=p>{</span>
+ <span class=n>uk_pr_debug</span><span class=p>(</span><span class=s>&#34;No available devices, maybe you didn&#39;t run \
+</span><span class=s>         with kraft run -b asplosbr0</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>);</span>
+	<span class=k>return</span> <span class=o>-</span><span class=mi>1</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div></li><li><p>Retrieve <code>struct uk_netdev *</code> for further API interaction from a netdev number (they are just incrementally going upwards).
+We take the first interface, so our device number should be <code>0</code>. We&rsquo;ll be using <a href=https://github.com/unikraft/unikraft/blob/staging/lib/uknetdev/include/uk/netdev.h#L93><code>uk_netdev_get</code></a></p><div class=highlight><pre class=chroma><code class=language-C data-lang=C><span class=k>struct</span> <span class=n>uk_netdev</span> <span class=o>*</span><span class=n>dev</span> <span class=o>=</span> <span class=n>uk_netdev_get</span><span class=p>(</span><span class=mi>0</span><span class=p>);</span>
+</code></pre></div></li><li><p>Configure the device, which essentially indicate how many receive and transmit queues the device should provide.
+In SMP scenarios, you typically configure as many queues as CPU-cores or handler threads you have been allocated.</p><p><strong>Note:</strong> Not every driver or network card can support multiple queues.</p><p>There is a query interface where you can check for queues are supported by your device.
+For simplicity, we are going to configure just one queue for each direction.
+This is supported by all drivers. We&rsquo;ll be using <a href=https://github.com/unikraft/unikraft/blob/staging/lib/uknetdev/include/uk/netdev.h#L177><code>uk_netdev_configure</code></a>.
+Although we are going to send packets only, we still have to also configure one receive queue (zero transmit or receive queues is not possible with our virtio driver):</p><div class=highlight><pre class=chroma><code class=language-C data-lang=C><span class=cm>/* Device configuration */</span>
+<span class=k>struct</span> <span class=n>uk_netdev_conf</span> <span class=n>dev_conf</span> <span class=o>=</span> <span class=p>{</span>
+     <span class=p>.</span><span class=n>nb_rx_queues</span> <span class=o>=</span> <span class=mi>1</span><span class=p>,</span>
+     <span class=p>.</span><span class=n>nb_tx_queues</span> <span class=o>=</span> <span class=mi>1</span>
+<span class=p>};</span>
+
+<span class=n>ret</span> <span class=o>=</span> <span class=n>uk_netdev_configure</span><span class=p>(</span><span class=n>dev</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>dev_conf</span><span class=p>);</span>
+<span class=k>if</span> <span class=p>(</span><span class=n>ret</span> <span class=o>&lt;</span> <span class=mi>0</span><span class=p>)</span> <span class=p>{</span>
+     <span class=n>uk_pr_debug</span><span class=p>(</span><span class=s>&#34;Couldn&#39;t configure</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>);</span>
+     <span class=k>return</span> <span class=o>-</span><span class=mi>1</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div></li><li><p>Configure the transmit queue <code>0</code> and the receive queue <code>0</code>. We use <a href=https://github.com/unikraft/unikraft/blob/staging/lib/uknetdev/include/uk/netdev.h#L224><code>uk_netdev_rxq_configure</code></a>
+and <a href=https://github.com/unikraft/unikraft/blob/staging/lib/uknetdev/include/uk/netdev.h#L268><code>uk_netdev_txq_configure</code></a>.
+This step allows us to specify the size for each queue and which allocators should be used for internal queue descriptors and receive buffers.
+We will take the default allocator for those items.
+You can define a dummy allocation function for the receive buffers, because we are not interested in receiving for now.
+We will also let the driver to choose an optimal queue size for us. You can hand-over <code>0</code>.</p><div class=highlight><pre class=chroma><code class=language-C data-lang=C><span class=cm>/* Dummy receive buffer allocation callback that is called by the driver */</span>
+<span class=k>static</span> <span class=kt>uint16_t</span> <span class=nf>dummy_alloc_rxpkts</span><span class=p>(</span><span class=kt>void</span> <span class=o>*</span><span class=n>argp</span> <span class=n>__unused</span><span class=p>,</span>
+             <span class=k>struct</span> <span class=n>uk_netbuf</span> <span class=o>*</span><span class=n>pkts</span><span class=p>[]</span> <span class=n>__unused</span><span class=p>,</span>
+             <span class=kt>uint16_t</span> <span class=n>count</span> <span class=n>__unused</span><span class=p>)</span>
+<span class=p>{</span>
+	<span class=k>return</span> <span class=mi>0</span><span class=p>;</span>
+<span class=p>}</span>
+
+<span class=cm>/* In at the end of main */</span>
+<span class=cm>/* Receive queue configuration */</span>
+<span class=k>struct</span> <span class=n>uk_netdev_rxqueue_conf</span> <span class=n>rxq_conf</span> <span class=o>=</span> <span class=p>{</span>
+     <span class=p>.</span><span class=n>a</span> <span class=o>=</span> <span class=n>uk_alloc_get_default</span><span class=p>(),</span>
+     <span class=p>.</span><span class=n>alloc_rxpkts</span> <span class=o>=</span> <span class=n>dummy_alloc_rxpkts</span>
+<span class=p>};</span>
+
+<span class=cm>/* Transmit queue configuration */</span>
+<span class=k>struct</span> <span class=n>uk_netdev_txqueue_conf</span> <span class=n>txq_conf</span> <span class=o>=</span> <span class=p>{</span>
+     <span class=p>.</span><span class=n>a</span> <span class=o>=</span> <span class=n>uk_alloc_get_default</span><span class=p>()</span>
+<span class=p>};</span>
+
+<span class=cm>/* Configure the RX queue */</span>
+<span class=n>ret</span> <span class=o>=</span> <span class=n>uk_netdev_rxq_configure</span><span class=p>(</span><span class=n>dev</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>rxq_conf</span><span class=p>);</span>
+<span class=k>if</span> <span class=p>(</span><span class=n>ret</span> <span class=o>&lt;</span> <span class=mi>0</span><span class=p>)</span> <span class=p>{</span>
+     <span class=n>uk_pr_debug</span><span class=p>(</span><span class=s>&#34;Failed to configure rx queue of netdev</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>);</span>
+     <span class=k>return</span> <span class=o>-</span><span class=mi>1</span><span class=p>;</span>
+<span class=p>}</span>
+
+<span class=cm>/* Configure the TX queue */</span>
+<span class=n>ret</span> <span class=o>=</span> <span class=n>uk_netdev_txq_configure</span><span class=p>(</span><span class=n>dev</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>txq_conf</span><span class=p>);</span>
+<span class=k>if</span> <span class=p>(</span><span class=n>ret</span> <span class=o>&lt;</span> <span class=mi>0</span><span class=p>)</span> <span class=p>{</span>
+     <span class=n>uk_pr_debug</span><span class=p>(</span><span class=s>&#34;Failed to configure tx queue of netdev</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>);</span>
+     <span class=k>return</span> <span class=o>-</span><span class=mi>1</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div></li><li><p>Start the network interface using <a href=https://github.com/unikraft/unikraft/blob/staging/lib/uknetdev/include/uk/netdev.h#L286><code>uk_netdev_start</code></a>
+If successful, the device is now ready to process network traffic.
+You will now have the ability to also enable interrupt mode for each queue individually and change the promiscuous setting for the interface.
+Because we will operate in <em>polling mode</em> to achieve the highest possible performance, we should not change any interrupt settings.
+We also do not need promiscuous mode because we will put the device&rsquo;s hardware address as sender address into our generated traffic.
+It is probably a good moment to print on the console this mac address and store it for later.
+We will need it to craft our first network packet.</p><div class=highlight><pre class=chroma><code class=language-C data-lang=C><span class=n>ret</span> <span class=o>=</span> <span class=n>uk_netdev_start</span><span class=p>(</span><span class=n>dev</span><span class=p>);</span>
+<span class=k>if</span> <span class=p>(</span><span class=n>ret</span> <span class=o>&lt;</span> <span class=mi>0</span><span class=p>)</span> <span class=p>{</span>
+	<span class=n>uk_pr_debug</span><span class=p>(</span><span class=s>&#34;Failed to start netdev</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>);</span>
+ <span class=k>return</span> <span class=o>-</span><span class=mi>1</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div></li></ol><p>For easier development of this state transition, we recommend to enable all kernel message types and optionally debug message (go to <code>Library Configuration</code> -> <code>ukbedug</code>).
+Many of these steps should produce some kernel output so that you can quicker see if something got misconfigured.</p><p>In order to test your code you should run the guest with one interface attached.
+For this purpose we need to create a network bridge on your Linux host first (we just need to do this once):</p><div class=highlight><pre class=chroma><code class=language-sh data-lang=sh><span class=c1># Ensure you have permissions to change stp</span>
+sudo sysctl -w net.bridge.bridge-nf-call-arptables<span class=o>=</span><span class=m>0</span>
+
+<span class=c1># Create bridge &#39;asplosbr0&#39;</span>
+brctl addbr asplosbr0
+brctl setfd asplosbr0 <span class=m>0</span>
+brctl sethello asplosbr0 <span class=m>0</span>
+brctl stp asplosbr0 off
+ifconfig asplosbr0 0.0.0.0 up
+
+<span class=c1># Disable packet filtering on bridge interfaces</span>
+sudo su -
+<span class=nb>echo</span> <span class=m>0</span> &gt; /proc/sys/net/bridge/bridge-nf-call-arptables
+<span class=nb>echo</span> <span class=m>0</span> &gt; /proc/sys/net/bridge/bridge-nf-call-iptables
+<span class=nb>echo</span> <span class=m>0</span> &gt; /proc/sys/net/bridge/bridge-nf-call-ip6tables
+<span class=nb>exit</span>
+</code></pre></div><p>As soon as your unikernel image builds, the guest can then be started with:</p><div class=highlight><pre class=chroma><code class=language-sh data-lang=sh>$ kraft run -b asplosbr0
+</code></pre></div><h3 id=03-say-hello-on-the-wire>03. Say Hello on the Wire</h3><p>In this chapter we are going to send out our first packet.
+We provide you a function through the header <code>"genpkt.h"</code> which generates an Ethernet-IPv4-UDP frame with a dummy payload for a given size: <code>genpkt_udp4()</code>.
+In the same header we also provide you the short-hand version <code>genpkt()</code> which has some parameters, like the IP addresses, pre-filled.</p><p>The only items that the function still wants to know from you are the following:</p><ul><li><p><code>a</code>: Allocator where the packet should be allocated from.
+Use <a href=https://github.com/unikraft/unikraft/blob/64870e20031aad230973b205ba80ff70a454c924/lib/ukalloc/include/uk/alloc.h#L135-L138><code>uk_alloc_get_default()</code></a> for now.</p></li><li><p><code>bufalign</code>: An alignment requirement for the packet buffer containing the packet.
+Some network drivers require specific alignments.
+You find this value after querying the device with <a href=https://github.com/unikraft/unikraft/blob/104fed122c41cbdedb03b701c19c38d4974cca34/lib/uknetdev/netdev.c#L217-L236><code>uk_netdev_info_get()</code></a> on <a href=https://github.com/unikraft/unikraft/blob/104fed122c41cbdedb03b701c19c38d4974cca34/lib/uknetdev/include/uk/netdev_core.h#L141-L150><code>struct uk_netdev_info</code></a> as <code>ioalign</code>.</p></li><li><p><code>headroom</code>: Reserved bytes at the beginning of the packet buffer and before the packet data starts.
+Some drivers require this in order to do another encapsulation on transmit (like virtio).
+You find this value on the <code>struct uk_netdev_info</code> as <code>nb_encap_tx</code>.</p></li><li><p><code>pktlen</code>: The size of the Ethernet frame (excluding CRC, FCS, SFD, and preamble) that should be generated.
+According to the <a href=https://www.ietf.org/rfc/rfc1042.txt>Ethernet specification</a> the smallest packet size can be created with <code>60</code> and the biggest with <code>1518</code>.
+The most interesting are minimum sized packets because those stress software and hardware components the most.
+For each packet, the header needs to be parsed and the packet needs to get forwarded to the next processing layer of the stack.
+As smaller the packets are, the more load with parsing and handling packet buffers occurs. So, please take <code>60</code> ;-)</p></li><li><p><code>mac_src</code>: The hardware address of our interface where we are going to send the packet out.</p></li></ul><p>The function returns you a <code>netbuf</code> that can be send out with <a href=https://github.com/unikraft/unikraft/blob/4e54f09a3930f0482a90903a5750c036346c7c06/lib/uknetdev/include/uk/netdev.h#L471-L508><code>uk_netdev_tx_one()</code></a>.
+Please check the resulting status code for success and free the packet with <a href=https://github.com/unikraft/unikraft/blob/4e54f09a3930f0482a90903a5750c036346c7c06/lib/uknetdev/netbuf.c#L220-L254><code>uk_netbuf_free()</code></a> in case of failures.
+The driver will do the free operation itself only if a packet got correctly enqueued to the device and sent.
+In such a case, you aren&rsquo;t allowed to touch this packet anymore after sending;
+so your transmit code should look like this:</p><div class=highlight><pre class=chroma><code class=language-c data-lang=c><span class=cm>/* &lt;...&gt; */</span>
+<span class=kt>int</span> <span class=n>status</span><span class=p>;</span>
+<span class=k>struct</span> <span class=n>uk_netdev_info</span> <span class=n>dev_info</span><span class=p>;</span>
+
+<span class=cm>/* Get device info */</span>	
+<span class=n>uk_netdev_info_get</span><span class=p>(</span><span class=n>dev</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>dev_info</span><span class=p>);</span>
+
+<span class=cm>/* Get the mac */</span>
+<span class=k>struct</span> <span class=n>uk_hwaddr</span> <span class=o>*</span><span class=n>hw</span> <span class=o>=</span> <span class=n>uk_netdev_hwaddr_get</span><span class=p>(</span><span class=n>dev</span><span class=p>);</span>
+
+<span class=cm>/* Generate UDP packet */</span>
+<span class=k>struct</span> <span class=n>uk_netbuf</span> <span class=o>*</span><span class=n>pkt</span> <span class=o>=</span> <span class=n>genpkt</span><span class=p>(</span><span class=n>uk_alloc_get_default</span><span class=p>(),</span> <span class=n>dev_info</span><span class=p>.</span><span class=n>ioalign</span><span class=p>,</span> <span class=n>dev_info</span><span class=p>.</span><span class=n>nb_encap_tx</span><span class=p>,</span> <span class=mi>60</span><span class=p>,</span> <span class=n>hw</span><span class=p>);</span>
+
+<span class=cm>/* Send the packet */</span>
+<span class=n>status</span> <span class=o>=</span> <span class=n>uk_netdev_tx_one</span><span class=p>(</span><span class=n>dev</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=n>pkt</span><span class=p>);</span>
+<span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=n>uk_netdev_status_successful</span><span class=p>(</span><span class=n>status</span><span class=p>))</span> <span class=p>{</span>
+	<span class=n>uk_pr_err</span><span class=p>(</span><span class=s>&#34;netdev%u: Failed to send packet %p</span><span class=se>\n</span><span class=s>&#34;</span><span class=p>,</span>
+		  <span class=n>uk_netdev_id_get</span><span class=p>(</span><span class=n>dev</span><span class=p>),</span> <span class=n>pkt</span><span class=p>);</span>
+	<span class=n>uk_netbuf_free</span><span class=p>(</span><span class=n>pkt</span><span class=p>);</span>
+<span class=p>}</span>
+
+<span class=cm>/* Do not touch pkt here anymore */</span>
+<span class=cm>/* &lt;...&gt; */</span>
+</code></pre></div><p>In order to see if everything works, attach <code>tshark</code> or <code>tcpdump</code> on your Linux host to <code>asplosbr0</code> on a second terminal:</p><div class=highlight><pre class=chroma><code class=language-sh data-lang=sh>$ tshark -i asplosbr0
+</code></pre></div><p>Whenever you launch your unikernel, you should be able to see the UDP packet:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>    3 1.050213439 192.168.128.1 → 192.168.128.254 UDP 60 5001 → 5001 Len=18
+</code></pre></div><p>You may not see the exact source IP or destination, but the UDP packet should be there along some IPV6 packets.</p><h3 id=04-dont-stop>04. Don&rsquo;t Stop</h3><p>Now let us send as much as we can with the current implementation.
+You can simply loop forever over packet generation and sending.
+You may notice that we get too many messages on the console that slow us down.
+Try disabling debug messages and all kernel messages except the critical ones from <code>ukdebug</code> config options. (<code>kraft menuconfig</code>)</p><p><strong>Note</strong>: You should be able to terminate your unikernel with <code>CTRL</code>+<code>C</code> when you launched it with <code>kraft</code> or <code>qemu-guest</code>.</p><h3 id=05-measuring-the-tx-throughput>05. Measuring the TX throughput</h3><p>It is now interesting to understand at which speed we are generating.
+For this purpose we prepared a little function in <code>"netspeed.h"</code> that computes the packet rate (packets/sec) and current bandwidth (MBit/s): <code>print_netspeed()</code>.</p><p>Declare before your loop the following two variables:</p><div class=highlight><pre class=chroma><code class=language-c data-lang=c><span class=kt>uint64_t</span> <span class=n>total_nb_pkts</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=cm>/* total number of pkts successfully sent */</span>
+<span class=kt>uint64_t</span> <span class=n>total_nb_bytes</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span> <span class=cm>/* total number of bytes successfully sent */</span>
+</code></pre></div><p>Whenever a packet was successfully sent, we will simply increment <code>total_nb_pkts</code> and add the sent bytes <code>total_nb_bytes</code> counters.
+In order to see a bandwidth computation that is comparable with physical Ethernet speeds, we have to additionally add the number of bytes (=<code>24</code>) for CRC, FCS, SFD, and preamble to each accounted packet size:</p><div class=highlight><pre class=chroma><code class=language-c data-lang=c>	<span class=n>status</span> <span class=o>=</span> <span class=n>uk_netdev_tx_one</span><span class=p>(</span><span class=n>netif</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=n>pkt</span><span class=p>);</span>
+	<span class=k>if</span> <span class=p>(</span><span class=n>uk_netdev_status_successful</span><span class=p>(</span><span class=n>status</span><span class=p>))</span> <span class=p>{</span>
+		<span class=cm>/* success */</span>
+		<span class=n>total_nb_pkts</span> <span class=o>+=</span> <span class=mi>1</span><span class=p>;</span>
+		<span class=n>total_nb_bytes</span> <span class=o>+=</span> <span class=mi>60</span> <span class=cm>/* pktlen */</span> <span class=o>+</span> <span class=mi>24</span><span class=p>;</span>
+	<span class=p>}</span> <span class=k>else</span> <span class=p>{</span>
+		<span class=cm>/* failed */</span>
+		<span class=n>uk_netbuf_free</span><span class=p>(</span><span class=n>pkt</span><span class=p>);</span>
+	<span class=p>}</span>
+</code></pre></div><p>By having this instrumentation, we could now just print the packet rate and bandwidth at every loop iteration with:</p><div class=highlight><pre class=chroma><code class=language-c data-lang=c>	<span class=n>print_netspeed</span><span class=p>(</span><span class=n>total_nb_pkts</span><span class=p>,</span> <span class=n>total_nb_bytes</span><span class=p>);</span>
+</code></pre></div><p>The problem is that printing is extremely expensive.
+This is because it happens synchronously in Unikraft, so the CPU can not do anything else while waiting for the console to finish its operation.
+Additionally, for computation, the clock is accessed to measure a time delta, which is also an expensive operation.
+In general, this means that we do not want this function to be called very often.
+The cheapest option is to call this print function every <code>n</code>th sent packet.
+We could do a cheap modulo operation by using a bitmask, for example:</p><div class=highlight><pre class=chroma><code class=language-c data-lang=c>		<span class=k>if</span> <span class=p>((</span><span class=n>total_nb_pkts</span> <span class=o>&amp;</span> <span class=mh>0x3fffff</span><span class=p>)</span> <span class=o>==</span> <span class=mh>0x0</span><span class=p>)</span> <span class=p>{</span>
+			<span class=n>print_netspeed</span><span class=p>(</span><span class=n>total_nb_pkts</span><span class=p>,</span> <span class=n>total_nb_bytes</span><span class=p>);</span>
+		<span class=p>}</span>
+</code></pre></div><p>You are able to adopt the mask <code>0x3fffff</code> in order to make printing more often or less often.</p><ul><li>Faster: <code>0x1fffff</code>, <code>0x0fffff</code>, <code>0x07ffff</code>, <code>0x03ffff</code>, <code>0x01ffff</code>, &mldr;</li><li>Slower: <code>0x7fffff</code>, <code>0xffffff</code>, <code>0x1ffffff</code>, <code>0x3ffffff</code>, <code>0x7ffffff</code>, &mldr;</li></ul><p>Another option is to use another counter variable that is reset as soon as we print:</p><div class=highlight><pre class=chroma><code class=language-c data-lang=c>		<span class=k>if</span> <span class=p>(</span><span class=n>count</span> <span class=o>==</span> <span class=mi>1000</span><span class=p>)</span> <span class=p>{</span>
+			<span class=n>print_netspeed</span><span class=p>(</span><span class=n>total_nb_pkts</span><span class=p>,</span> <span class=n>total_nb_bytes</span><span class=p>);</span>
+			<span class=n>count</span> <span class=o>=</span> <span class=mi>0</span><span class=p>;</span>
+		<span class=p>}</span>
+</code></pre></div><p>Instrument your code with the two statistics variables and implement one of the mentioned printing mechanisms.
+We should roughly print not faster than every <code>2</code> seconds, ideal are roughly <code>5</code>-<code>10</code> second intervals.
+Remember, if your rate goes up or down with one of the following experiments, you may need to revisit your chosen value and adopt this <code>n</code>th packet parameter again.</p><h3 id=06-optimizing-for-even-more-performance>06. Optimizing for even more performance</h3><p>Now, we have can go through some options to play around with.</p><p>Our overall goal is to get the packet rate of our packer generator as high as possible.
+Note your rate and bandwidth before and, after each of the steps because we are going over this list twice, make sure that you do the steps non-destructive and keep the code of each step.</p><ol><li><p><strong>Try compiler options</strong>: Enable <em>Link Time Optimizations</em> (LTO) and <em>Dead Code Elimitation</em> (DCE) within <code>Build Options</code> of the <code>menuconfig</code>.
+The compiler reconsiders a second time optimizations like function inlining while linking the final binary;
+actually over the whole code base at once again.
+These optimizations can have some visible effect on your packet rate.
+Try it out!</p></li><li><p><strong>Don&rsquo;t waste packets</strong>: An obvious idea might be to keep packets which have failed to send.
+We could save on packet generation time if we wouldn&rsquo;t free them.
+We retry sending a packet until it finally leaves.
+Our assumption is that the reason why it fails is that the transmit queue is full.
+This approach can have positive but also likely negative effects.
+The reason might be that some drivers may query their device more often to confirm that there is really no space left.
+This causes the device to be busy answering instead of doing some actual work.
+Try it out!</p></li><li><p><strong>Copy instead of create</strong>: Depending on how expensive the packet generation function is (e.g., because of an extra step computing a checksum), it could be cheaper to do a <code>memcpy</code> operation from a primordial packet buffer instead.
+This means that we would run <code>genpkt_udp4()</code> just once and use as source for all cloned packets that are going to get transmitted.
+We provide you such an extra routine with <code>"netbuf.h"</code>: <code>uk_netbuf_dup_single()</code> duplicates a given <code>netbuf</code> packet with <code>memcpy</code>.
+Like <code>genpkt_udp4()</code>, it also needs the same extra information like <code>bufalign</code>, <code>headroom</code> for doing the allocation of the duplicate.
+Try it out!</p></li><li><p><strong>Use a memory pool allocator</strong>: This is usually a very promising optimization.
+Instead of using a general purpose allocator you can ensure that all <code>malloc</code> and <code>free</code> operations are satisfied within O(1).
+If we deal with rates at maximum speed you want to have every job done as fast as possible.
+A pool is basically a list of pre-allocated objects that have all the same size and an alignment property (if given).
+On <code>malloc</code>, an object is returned out of this list;
+on <code>free</code>, the object gets back to the free list.
+For trying it out, continue with <code>06.1</code> and come back to point 5 of this list afterwards.</p></li><li><p><strong>Zero-copy with refcounting</strong>: Instead of all the optimization ahead, we could also simply increase the <code>netbuf</code> reference counter before sending.
+This avoids that the packet being <code>free</code>&rsquo;d after sending and we would not need to allocate, copy, or generate a packet over and over again.
+Every <code>free</code> operation will decrease the refcount until the reference counter becomes zero.
+At this point the netbuf is really <code>free</code>&rsquo;d.
+Unfortunately, we do not support this mode with network drivers which modify the packet for the transmission, like virtio-net does.
+Unfortunately, it is not an option for virtio-net at the moment.
+The transmit function will return an error.</p></li></ol><p>Besides these options, another common technique is using <strong>batching</strong>.
+Instead of sending one packet at a time, you send multiple ones at once.
+The advantage is that the device backend is notified just once per batch instead of for each packet.(less context switches)
+This reduces communication overhead.
+This feature is currently submitted as <a href=https://github.com/unikraft/unikraft/pull/243>PR#243</a> and will be added in the near future.</p><p>In order to understand better the bottlenecks in our implementation, we can isolate the code from the netdev device bottlenecks.
+This is done by replacing the send operation with <code>uk_netbuf_free()</code>.
+There we can assume that this means that every transmit operation works but this reveals more dominantly performance differences of the suggestions 1-5 ahead.
+Go over the list again and note the new collected rates.
+Which option results in the best performance?</p><p><strong>Recommendation</strong>: The pre-processor can help you switching between these two modes quickly:</p><div class=highlight><pre class=chroma><code class=language-c data-lang=c><span class=cp>#if 0</span><span class=c> /* &lt;-- toggle between these two blocks with 0 and 1 */
+</span><span class=c>	status = uk_netdev_tx_one(netif, 0, pkt);
+</span><span class=c>	if (uk_netdev_status_successful(status)) {
+</span><span class=c>		/* success */
+</span><span class=c>		total_nb_pkts += 1;
+</span><span class=c>		total_nb_bytes += 60 /* pktlen */ + 24;
+</span><span class=c>	} else {
+</span><span class=c>		/* failed */
+</span><span class=c>		uk_netbuf_free(pkt);
+</span><span class=c>	}
+</span><span class=c></span><span class=cp>#else
+</span><span class=cp></span>	<span class=n>uk_netbuf_free</span><span class=p>(</span><span class=n>pkt</span><span class=p>);</span>
+	<span class=cm>/* always success */</span>
+	<span class=n>total_nb_pkts</span> <span class=o>+=</span> <span class=mi>1</span><span class=p>;</span>
+	<span class=n>total_nb_bytes</span> <span class=o>+=</span> <span class=mi>60</span> <span class=cm>/* pktlen */</span> <span class=o>+</span> <span class=mi>24</span><span class=p>;</span>
+<span class=cp>#endif
+</span></code></pre></div><h4 id=061-use-a-memory-pool>06.1. Use a memory pool</h4><p>We provide a pool allocator library with Unikraft: <code>libukallocpool</code>.
+First of all, add a dependency to this library in your <code>Config.uk</code>:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>depends on LIBUKALLOCPOOL
+</code></pre></div><p>This dependency makes the header <code>"&lt;uk/allocpool.h>"</code> (within <code>[PATH-TO-UNIKRAFT]/lib/ukallocpool/include/uk/</code>) available.</p><p>In order to allocate one pool, you call <code>uk_allocpool_alloc()</code> at your application startup.
+The function will allocate the pool memory from a parent allocator.
+This happens just during creation time for pre-allocating all the pool objects.</p><p>In our case this parent is the default allocator.
+As <code>obj_len</code> you should choose <code>2048</code> because this is a big enough buffer to keep packet data and needed meta data.
+<code>obj_align</code> should be again set to the alignment requirement of the device (<code>struct uk_netdev_info</code>-><code>ioalign</code>).
+The <code>obj_count</code> argument should be big enough so that we do not run out of pool objects while sending.
+You can try different values, start with <code>1024</code>.</p><div class=highlight><pre class=chroma><code class=language-C data-lang=C><span class=k>struct</span> <span class=n>uk_allocpool</span> <span class=o>*</span><span class=n>pool</span><span class=p>;</span>
+
+<span class=n>pool</span> <span class=o>=</span> <span class=n>uk_allocpool_alloc</span><span class=p>(</span><span class=n>uk_alloc_get_default</span><span class=p>(),</span> <span class=mi>1024</span><span class=p>,</span> <span class=mi>2048</span><span class=p>,</span>
+                          <span class=n>netdev_info</span><span class=p>.</span><span class=n>ioalign</span><span class=p>);</span>
+</code></pre></div><p>In order to use the pool as allocator for <code>pktgen_udp4()</code> and <code>uk_netbuf_dup_single()</code>, you need to get the compatibility interface from libukallocpool:</p><div class=highlight><pre class=chroma><code class=language-C data-lang=C><span class=k>struct</span> <span class=n>uk_alloc</span> <span class=o>*</span><span class=n>p</span><span class=p>;</span>
+
+<span class=n>p</span> <span class=o>=</span> <span class=n>uk_allocpool2ukalloc</span><span class=p>(</span><span class=n>pool</span><span class=p>);</span>
+</code></pre></div><p><code>p</code> can then be handed over as normal allocator, like <code>uk_alloc_get_default()</code>.
+<code>p</code> will always return 2048B objects as long as the malloc request is smaller or equal to the initialized <code>obj_len</code>.
+Any bigger allocation request cannot be satisfied and libukallocpool is returning <code>NULL</code>.</p><h3 id=07-receiver-unikernel>07. Receiver unikernel</h3><p>With the last task you will implement a receive-only unikernel that measures the received traffic.
+We keep busy polling for receive as well but you should implement a switching logic to switch between transmit and receive mode.
+You can do this either with a configuration option (<code>Config.uk</code>) or with a kernel argument (see: <code>int argc, char *argv[]</code>).</p><p>Opening the network device is the same for receive except that we implement and hand-over a proper receive buffer allocation function.
+This will replace <code>dummy_alloc_rxpkts()</code> when the receive mode is activated.
+We can use the same pool allocator that we allocated for transmit during task 06.1.</p><p>Whenever the driver calls our callback, it tries to setup new receive buffers to receive new packet data.
+When filled, these buffers are later returned back to us.
+The function should look like this:</p><div class=highlight><pre class=chroma><code class=language-C data-lang=C><span class=cm>/* global variables, fill-out before configuring the receive queue */</span>
+<span class=k>struct</span> <span class=n>uk_netdev_info</span> <span class=n>netdev_info</span><span class=p>;</span>
+<span class=k>struct</span> <span class=n>uk_alloc</span> <span class=o>*</span><span class=n>p</span><span class=p>;</span>
+
+<span class=kt>uint16_t</span> <span class=nf>alloc_rxpkts</span><span class=p>(</span><span class=kt>void</span> <span class=o>*</span><span class=n>argp</span> <span class=n>__unused</span><span class=p>,</span>
+                      <span class=k>struct</span> <span class=n>uk_netbuf</span> <span class=o>*</span><span class=n>pkts</span><span class=p>[],</span>
+                      <span class=kt>uint16_t</span> <span class=n>count</span><span class=p>)</span>
+<span class=p>{</span>
+	<span class=kt>uint16_t</span> <span class=n>i</span><span class=p>;</span>
+
+	<span class=cm>/* fill out given array with allocated receive buffers */</span>
+	<span class=k>for</span> <span class=p>(</span><span class=n>i</span><span class=o>=</span><span class=mi>0</span><span class=p>;</span> <span class=n>i</span><span class=o>&lt;</span><span class=n>count</span><span class=p>;</span> <span class=o>++</span><span class=n>i</span><span class=p>)</span> <span class=p>{</span>
+	    <span class=n>pkts</span><span class=p>[</span><span class=n>i</span><span class=p>]</span> <span class=o>=</span> <span class=n>uk_netbuf_alloc_buf</span><span class=p>(</span><span class=n>p</span><span class=p>,</span>
+                                      <span class=mi>2048</span><span class=p>,</span>
+                                      <span class=n>netdev_info</span><span class=p>.</span><span class=n>ioalign</span><span class=p>,</span>
+                                      <span class=n>netdev_info</span><span class=p>.</span><span class=n>nb_encap_rx</span><span class=p>,</span> <span class=cm>/* headroom for rx */</span>
+                                      <span class=mi>0</span><span class=p>,</span> <span class=nb>NULL</span><span class=p>);</span>
+	    <span class=k>if</span> <span class=p>(</span><span class=o>!</span><span class=n>pkts</span><span class=p>[</span><span class=n>i</span><span class=p>])</span>
+			<span class=k>break</span><span class=p>;</span> <span class=cm>/* We ran out of memory */</span>
+	<span class=p>}</span>
+	<span class=k>return</span> <span class=n>i</span><span class=p>;</span>
+<span class=p>}</span>
+</code></pre></div><p>Please note that this function expects that we initialized the global variables <code>netdev_info</code> and <code>p</code> before we configure the receive queue.</p><p>Now you should be able to build the polling receive loop based on the following snippet:</p><div class=highlight><pre class=chroma><code class=language-c data-lang=c><span class=n>status</span> <span class=o>=</span> <span class=n>uk_netdev_rx_one</span><span class=p>(</span><span class=n>netdev</span><span class=p>,</span> <span class=mi>0</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>pkt</span><span class=p>);</span>
+<span class=k>if</span> <span class=p>(</span><span class=n>uk_netdev_status_successful</span><span class=p>(</span><span class=n>status</span><span class=p>))</span> <span class=p>{</span>
+	<span class=cm>/* count packet and bytes and free received packet */</span>
+	<span class=n>nb_total_pkts</span> <span class=o>+=</span> <span class=mi>1</span><span class=p>;</span>
+	<span class=n>nb_total_bytes</span> <span class=o>+=</span> <span class=n>pkt</span><span class=o>-&gt;</span><span class=n>len</span> <span class=o>+</span> <span class=mi>24</span><span class=p>;</span>
+	<span class=n>uk_netbuf_free</span><span class=p>(</span><span class=n>pkt</span><span class=p>);</span>
+<span class=p>}</span>
+</code></pre></div><p>In order to test your configuration, you can run 2 unikernels that are both connected to <code>asplosbr0</code>.
+One is transmitting traffic and the other one receives it.</p></div></div></div></div></div></div><footer class=sub-footer><div class="container py-5"><div class=row><div class="col-12 col-md">Unikraft
+<small class="d-block mb-3 text-muted">© 2021</small></div><div class="col-6 col-md"><h5>Social</h5><ul class="list-unstyled text-small"><li><a class=text-muted href=https://twitter.com/UnikraftSDK>Twitter</a></li><li><a class=text-muted href=https://www.linkedin.com/company/unikraft-sdk/>LinkedIn</a></li></ul></div><div class="col-6 col-md"><h5>&nbsp;</h5><ul class="list-unstyled text-small"><li><a class=text-muted href=https://bit.ly/UnikraftDiscord>Discord</a></li><li><a class=text-muted href=https://github.com/unikraft/unikraft>GitHub</a></li></ul></div><div class="col-6 col-md"><h5>Resources</h5><ul class="list-unstyled text-small"><li><a class=text-muted href=https://unikraft.org>Unikraft Homepage</a></li><li><a class=text-muted href=https://unikraft.io>Unikraft Cloud</a></li></ul></div><div class="col-6 col-md"><h5>&nbsp;</h5><ul class="list-unstyled text-small"><li><a class=text-muted href=http://docs.unikraft.org>Documentation</a></li><li><a class=text-muted href=https://unikraft.org/license/>Open-Source Licenses</a></li></ul></div></div></footer></div><script type=text/javascript src=/js/scripts.min.eaf147370baecdd07c022597db631f99cab1c9cd6479de586f30327a568d6a0f.js></script></body></html>
