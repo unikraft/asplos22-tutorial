@@ -1,16 +1,16 @@
 <!doctype html><html lang=en><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="ie=edge"><title>Running complex applications - ASPLOS'22 Tutorial</title><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Unikraft ASPLOS'22 Tutorial"><meta property="og:title" content="Unikraft ASPLOS'22 Tutorial"><meta property="og:type" content="website"><meta property="og:url" content="https://asplos22.unikraft.org"><meta property="og:description" content="ASPLOS'22 Tutorial on Unikraft: educating the community on unikernels, libOSes, and particularly Unikraft."><meta name=twitter:card content="summary"><meta name=twitter:site content="@UnikraftSDK"><meta name=twitter:creator content="@UnikraftSDK"><link rel=icon href=/favicon.png><link rel=stylesheet href=/css/style.min.9d91cadd6bf9a027131051416b1155705f1a4ce3735fcdef7072384726bf9590.css></head><body class="page page-default-single"><div id=main-menu-mobile class=main-menu-mobile><ul><li class="menu-item-learn more about unikraft"><a href=https://unikraft.org><span>Learn more about Unikraft</span></a></li></ul></div><div class=wrapper><div class=header><div class=container><div class=logo><a href=/><img alt=Logo src=/images/unikraft.svg>
 <span>ASPLOS'22 Tutorial</span></a></div><div class=logo-mobile><a href=/><img alt=Logo src=/images/unikraft.svg>
 <span>ASPLOS'22 Tutorial</span></a></div><div id=main-menu class=main-menu><ul><li class="menu-item-learn more about unikraft"><a href=https://unikraft.org><span>Learn more about Unikraft</span></a></li></ul></div><button id=toggle-main-menu-mobile class="hamburger hamburger--slider" type=button>
-<span class=hamburger-box><span class=hamburger-inner></span></span></button></div></div><div class="container pt-2 pt-md-4 pb-3 pb-md-6"><div class=row><div class="col-12 col-md-3 mb-3"><div class=sidebar><div class=docs-menu><h4></h4><ul><li><a href=/intro/>Introduction to Unikraft</a></li><li><a href=/getting-started/>Getting started with Unikraft</a></li><li><a href=/a-look-inside/>Inside the config and build system</a></li><li class=active><a href=/complex-apps/>Running complex applications</a></li><li><a href=/syscall_shim-bincompat/>syscall_shim and bincompat</a></li><li><a href=/current-research-and-dev/>Research and development</a></li><li><a href=/people/>People</a></li></ul></div></div></div><div class="col-12 col-md-9"><h1 class=title>Running complex applications</h1><div class=content><h2 id=work-items>Work Items</h2><p>In this session, we are going to run some real-world applications on top of Unikraft.</p><h3 id=support-files>Support Files</h3><p>Session support files are available <a href=https://github.com/unikraft/summer-of-code-2021>in the repository</a>.
+<span class=hamburger-box><span class=hamburger-inner></span></span></button></div></div><div class="container pt-2 pt-md-4 pb-3 pb-md-6"><div class=row><div class="col-12 col-md-3 mb-3"><div class=sidebar><div class=docs-menu><h4></h4><ul><li><a href=/intro/>Introduction to Unikraft</a></li><li><a href=/getting-started/>Getting started with Unikraft</a></li><li><a href=/a-look-inside/>Inside the config and build system</a></li><li class=active><a href=/complex-apps/>Running complex applications</a></li><li><a href=/syscall_shim-bincompat/>syscall_shim and bincompat</a></li><li><a href=/current-research-and-dev/>Research and development</a></li><li><a href=/people/>People</a></li></ul></div></div></div><div class="col-12 col-md-9"><h1 class=title>Running complex applications</h1><div class=content><h2 id=work-items>Work Items</h2><p>In this session, we are going to run some real-world applications on top of Unikraft.</p><h3 id=support-files>Support Files</h3><p>Session support files are available <a href=https://github.com/unikraft/asplos22-tutorial>in the repository</a>.
 If you already cloned the repository, update it and enter the session directory:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>$ cd path/to/repository/clone
 
 $ git pull --rebase
 
-$ cd content/en/complex-apps/
+$ cd content/complex-apps/
 
 $ ls -F
 images/  index.md  sol/  work/
-</code></pre></div><p>If you haven&rsquo;t cloned the repository yet, clone it and enter the session directory:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>$ git clone https://github.com/unikraft/summer-of-code-2021
+</code></pre></div><p>If you haven&rsquo;t cloned the repository yet, clone it and enter the session directory:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>$ git clone https://github.com/unikraft/asplos22-tutorial
 
 $ cd summer-of-code-2021/content/en/complex-apps/
 
@@ -193,42 +193,5 @@ Start the Redis on the top of Unikraft as we have already done at above and in a
 </code></pre></div><p>The printed values represent <code>requests/second</code> for the operation <code>set</code> and <code>get</code>.</p><p>Further, we will run the executable <code>redis-server</code> (<code>./redis-server</code>), which can be found in the support folder, and the following command (only the IP address of the redis server was changed):</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>$ ./redis-benchmark --csv -q -r 100 -n 10000 -c 1 -h 127.0.0.1 -p 6379 -P 8 -t set,get
 </code></pre></div><p>After that you&rsquo;ll get something like this:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>&#34;SET&#34;,&#34;285714.28&#34;
 &#34;GET&#34;,&#34;294117.62&#34;
-</code></pre></div><h3 id=06-nginx>06. Nginx</h3><p>The aim of this work item is to set up and run Nginx.
-Find the support files in the <code>work/06-set-up-and-run-nginx/</code> folder of the session directory.</p><p>From the point of view of the library dependencies, the nginx app has the same dependencies as the Redis app.
-It&rsquo;s your choice how you assign the IP to the VM.</p><p>In the support folder of this work item there is a subfolder called <code>nginx</code> with the following structure:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>nginx_files
-`-- nginx/
-    |-- conf/
-    |   |-- fastcgi.conf
-    |   |-- fastcgi_params
-    |   |-- koi-utf
-    |   |-- koi-win
-    |   |-- mime.types
-    |   |-- nginx.conf
-    |   |-- nginx.conf.default
-    |   |-- scgi_params
-    |   |-- uwsgi_params
-    |   `-- win-utf
-    |-- data/
-    |   `-- images/
-    |       `-- small-img100.png
-    |-- html/
-    |   |-- 50x.html
-    |   `-- index.html
-    `-- logs/
-        |-- error.log
-        `-- nginx.pid
-</code></pre></div><p>The path to the <code>nginx_files</code> folder should be given as a parameter to the <code>-e option</code> of the <code>qemu-guest</code>.
-The <code>html/</code> folder stores the files of the website you want to be run.</p><p>If everything works as expected, you should see the following web page in the browser.</p><p><img src=/complex-apps/images/nginx_output.png alt="nginx output"></p><h3 id=07-nginx-benchmarking-tutorial>07. Nginx Benchmarking (Tutorial)</h3><p>Benchmarking Nginx running on the top of Unikraft can be achieved with a utility called <code>iperf</code>.
-The package can be easily installed using the command:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>sudo apt-get install -y iperf
-</code></pre></div><p>Next, we will start the nginx app as we have done at the previous work item and then we will open another two terminals.
-We&rsquo;ll start an <code>iperf</code> server in the first terminal with the command:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>$ iperf -s
-</code></pre></div><p>In the second terminal we&rsquo;ll start an <code>iperf</code> client with the command:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>$ iperf -c 172.44.0.76 -p 80
-</code></pre></div><p>If everything runs as expected, then we will see the following output:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>------------------------------------------------------------
-Client connecting to 172.44.0.76, TCP port 80
-TCP window size: 85.0 KByte (default)
-------------------------------------------------------------
-[  3] local 172.44.0.1 port 33262 connected with 172.44.0.76 port 80
-[ ID] Interval       Transfer     Bandwidth
-[  3]  0.0-10.0 sec  1.28 GBytes  1.10 Gbits/sec
-</code></pre></div><h3 id=08-give-us-feedback>08. Give Us Feedback</h3><p>We want to know how to make the next sessions better. For this we need your <a href=https://forms.gle/QyvxBx19cK4fUYRS7>feedback</a>. Thank you!</p></div></div></div></div></div></div><footer class=sub-footer><div class="container py-5"><div class=row><div class="col-12 col-md">Unikraft
+</code></pre></div></div></div></div></div></div></div><footer class=sub-footer><div class="container py-5"><div class=row><div class="col-12 col-md">Unikraft
 <small class="d-block mb-3 text-muted">© 2021</small></div><div class="col-6 col-md"><h5>Social</h5><ul class="list-unstyled text-small"><li><a class=text-muted href=https://twitter.com/UnikraftSDK>Twitter</a></li><li><a class=text-muted href=https://www.linkedin.com/company/unikraft-sdk/>LinkedIn</a></li></ul></div><div class="col-6 col-md"><h5>&nbsp;</h5><ul class="list-unstyled text-small"><li><a class=text-muted href=https://bit.ly/UnikraftDiscord>Discord</a></li><li><a class=text-muted href=https://github.com/unikraft/unikraft>GitHub</a></li></ul></div><div class="col-6 col-md"><h5>Resources</h5><ul class="list-unstyled text-small"><li><a class=text-muted href=https://unikraft.org>Unikraft Homepage</a></li><li><a class=text-muted href=https://unikraft.io>Unikraft Cloud</a></li></ul></div><div class="col-6 col-md"><h5>&nbsp;</h5><ul class="list-unstyled text-small"><li><a class=text-muted href=http://docs.unikraft.org>Documentation</a></li><li><a class=text-muted href=https://unikraft.org/license/>Open-Source Licenses</a></li></ul></div></div></footer></div><script type=text/javascript src=/js/scripts.min.eaf147370baecdd07c022597db631f99cab1c9cd6479de586f30327a568d6a0f.js></script></body></html>
