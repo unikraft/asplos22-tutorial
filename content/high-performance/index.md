@@ -152,6 +152,7 @@ editing the `main` function from `main.c`. Read the description of any function 
      	.nb_rx_queues = 1,
      	.nb_tx_queues = 1
    };
+   int ret;
 
    ret = uk_netdev_configure(dev, &dev_conf);
    if (ret < 0) {
@@ -233,7 +234,7 @@ sudo brctl addbr asplosbr0
 sudo brctl setfd asplosbr0 0
 sudo brctl sethello asplosbr0 0
 sudo brctl stp asplosbr0 off
-ifconfig asplosbr0 0.0.0.0 up
+sudo ifconfig asplosbr0 0.0.0.0 up
 
 # Disable packet filtering on bridge interfaces
 sudo su -
