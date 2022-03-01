@@ -13,7 +13,7 @@ $ sudo apt-get -y install sgabios socat bridge-utils ifupdown tshark tcpdump
 
 We also need to enable the ``br_netfilter`` kernel module.
 ```
-sudo modprobe br_netfilter
+$ sudo modprobe br_netfilter
 ```
 ## Overview
 
@@ -229,10 +229,10 @@ For this purpose we need to create a network bridge on your Linux host first (we
 sudo sysctl -w net.bridge.bridge-nf-call-arptables=0
 
 # Create bridge 'asplosbr0'
-brctl addbr asplosbr0
-brctl setfd asplosbr0 0
-brctl sethello asplosbr0 0
-brctl stp asplosbr0 off
+sudo brctl addbr asplosbr0
+sudo brctl setfd asplosbr0 0
+sudo brctl sethello asplosbr0 0
+sudo brctl stp asplosbr0 off
 ifconfig asplosbr0 0.0.0.0 up
 
 # Disable packet filtering on bridge interfaces
@@ -311,7 +311,7 @@ if (!uk_netdev_status_successful(status)) {
 In order to see if everything works, attach `tshark` or `tcpdump` on your Linux host to `asplosbr0` on a second terminal:
 
 ```sh
-$ tshark -i asplosbr0
+$ sudo tshark -i asplosbr0
 ```
 
 Whenever you launch your unikernel, you should be able to see the UDP packet:
