@@ -8,7 +8,7 @@ summary: We explore how we can create high performance application over Unikraft
 
 In this session we will be making a high performance UDP packet generation application. We will be using ```tshark``` and ```tcpdump``` to analyse and debug our implementation. The VM that we provide you access to already has these packages installed.
 ```
-$ sudo apt-get -y install qemu-kvm qemu-system-x86 sgabios socat bridge-utils ifupdown tshark tcpdump
+$ sudo apt-get -y install sgabios socat bridge-utils ifupdown tshark tcpdump
 ```
 
 We also need to enable the ``br_netfilter`` kernel module.
