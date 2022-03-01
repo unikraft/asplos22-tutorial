@@ -5,6 +5,8 @@ weight: 6
 summary: We go through current research and development tracks in the Unikraft project. Expected time 30mn.
 ---
 
+_The presentation of this session can be found [here](/current-research-and-dev/asplos22-hugo-lefeuvre.pdf)._
+
 This talk will focus on unikernels in production, how we've been trying to achieve that in the last year or so, and more generally about what's been going on in the Unikraft community recently.
 
 The goal of this talk is to trigger a discussion, and show what awesome things you could do with Unikraft in your research!
