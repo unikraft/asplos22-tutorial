@@ -143,7 +143,7 @@ If you want to clone the repository yourself, do
 ```
 $ git clone https://github.com/unikraft/asplos22-tutorial
 
-$ cd asplos22-tutorial/content/en/a-look-inside/
+$ cd asplos22-tutorial/content/a-look-inside/
 
 $ ls
 images/  index.md  sol/  work/
