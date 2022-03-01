@@ -67,4 +67,4 @@ The tutorial will take place in Room 2A from 10:00 to 18:00 (CET).
 | 15:00 - 16:00 | Running applications in binary compatibility        | [Razvan Deaconescu](https://github.com/razvand) (UPB) |
 | 16:00 - 16:30 | *Coffee Break 2 (Foyer Garden 4 & 5)*               | |
 | 16:30 - 17:30 | Using Unikraft for performance-oriented use cases   | [Vlad-Andrei Bădoiu](https://vladandrew.github.io/) (UPB) |
-| 17:30 - 17:45 | Unikernels: Paths to Production & Current Trends    | [Hugo Lefeuvre](https://www.research.manchester.ac.uk/portal/en/researchers/hugo-lefeuvre(6a7c2d5d-c88b-427d-9a6f-5a1fa3ceae8f).html) (UoM) |
+| 17:30 - 17:45 | Unikernels: Paths to Production & Current Research Trends    | [Hugo Lefeuvre](https://www.research.manchester.ac.uk/portal/en/researchers/hugo-lefeuvre(6a7c2d5d-c88b-427d-9a6f-5a1fa3ceae8f).html) (UoM) |
