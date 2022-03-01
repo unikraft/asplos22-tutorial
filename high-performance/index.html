@@ -72,6 +72,7 @@ Although we are going to send packets only, we still have to also configure one 
      <span class=p>.</span><span class=n>nb_rx_queues</span> <span class=o>=</span> <span class=mi>1</span><span class=p>,</span>
      <span class=p>.</span><span class=n>nb_tx_queues</span> <span class=o>=</span> <span class=mi>1</span>
 <span class=p>};</span>
+<span class=kt>int</span> <span class=n>ret</span><span class=p>;</span>
 
 <span class=n>ret</span> <span class=o>=</span> <span class=n>uk_netdev_configure</span><span class=p>(</span><span class=n>dev</span><span class=p>,</span> <span class=o>&amp;</span><span class=n>dev_conf</span><span class=p>);</span>
 <span class=k>if</span> <span class=p>(</span><span class=n>ret</span> <span class=o>&lt;</span> <span class=mi>0</span><span class=p>)</span> <span class=p>{</span>
@@ -137,7 +138,7 @@ sudo brctl addbr asplosbr0
 sudo brctl setfd asplosbr0 <span class=m>0</span>
 sudo brctl sethello asplosbr0 <span class=m>0</span>
 sudo brctl stp asplosbr0 off
-ifconfig asplosbr0 0.0.0.0 up
+sudo ifconfig asplosbr0 0.0.0.0 up
 
 <span class=c1># Disable packet filtering on bridge interfaces</span>
 sudo su -
