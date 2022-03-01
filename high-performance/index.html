@@ -2,7 +2,7 @@
 <span>ASPLOS'22 Tutorial</span></a></div><div class=logo-mobile><a href=/><img alt=Logo src=/images/unikraft.svg>
 <span>ASPLOS'22 Tutorial</span></a></div><div id=main-menu class=main-menu><ul><li class="menu-item-learn more about unikraft"><a href=https://unikraft.org><span>Learn more about Unikraft</span></a></li></ul></div><button id=toggle-main-menu-mobile class="hamburger hamburger--slider" type=button>
 <span class=hamburger-box><span class=hamburger-inner></span></span></button></div></div><div class="container pt-2 pt-md-4 pb-3 pb-md-6"><div class=row><div class="col-12 col-md-3 mb-3"><div class=sidebar><div class=docs-menu><h4></h4><ul><li><a href=/intro/>Introduction to Unikraft</a></li><li><a href=/getting-started/>Getting started with Unikraft</a></li><li><a href=/a-look-inside/>Inside the Config and Build System</a></li><li><a href=/complex-apps/>Running complex applications</a></li><li><a href=/syscall_shim-bincompat/>Syscall Shim and Binary Compatibility Layer</a></li><li class=active><a href=/high-performance/>High performance applications</a></li><li><a href=/current-research-and-dev/>Unikernels: Paths to Production & Current Research Trends</a></li><li><a href=/people/>People</a></li></ul></div></div></div><div class="col-12 col-md-9"><h1 class=title>High performance applications</h1><div class=content><h2 id=requirements>Requirements</h2><p>In this session we will be making a high performance UDP packet generation application. We will be using <code>tshark</code> and <code>tcpdump</code> to analyse and debug our implementation. The VM that we provide you access to already has these packages installed.</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>$ sudo apt-get -y install sgabios socat bridge-utils ifupdown tshark tcpdump
-</code></pre></div><p>We also need to enable the <code>br_netfilter</code> kernel module.</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>sudo modprobe br_netfilter
+</code></pre></div><p>We also need to enable the <code>br_netfilter</code> kernel module.</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>$ sudo modprobe br_netfilter
 </code></pre></div><h2 id=overview>Overview</h2><p>We now turn our attention to what unikernels excel at, performance. We will introduce to you how to develop highly specialized and performance-optimized unikernels with Unikraft. So far, we have focused on applications and POSIX compatibility; where it is important to provide the same set of APIs and system calls that your application uses on its original environment (i.e., as a Linux user space application). We achieve this by stacking multiple micro-libraries which then assemble together to form a combination of various necessary “higher-level” APIs.</p><p>In this session we will be looking into networking applications, but the idea presented today is general and can be used to speedup many applications, such as memory disaggregation, filesystem operations implementation and many more. In the context of network-based applications, we would typically develop network functionality based on the <code>sockets API</code>. This requires the following library stack being available within Unikraft for the socket (and friends) API to interface with the virtual Network Interface Card (vNIC):</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback> .-------------------------.
 (     Socket application    )
  &#39;-------------------------&#39;
@@ -133,10 +133,10 @@ For this purpose we need to create a network bridge on your Linux host first (we
 sudo sysctl -w net.bridge.bridge-nf-call-arptables<span class=o>=</span><span class=m>0</span>
 
 <span class=c1># Create bridge &#39;asplosbr0&#39;</span>
-brctl addbr asplosbr0
-brctl setfd asplosbr0 <span class=m>0</span>
-brctl sethello asplosbr0 <span class=m>0</span>
-brctl stp asplosbr0 off
+sudo brctl addbr asplosbr0
+sudo brctl setfd asplosbr0 <span class=m>0</span>
+sudo brctl sethello asplosbr0 <span class=m>0</span>
+sudo brctl stp asplosbr0 off
 ifconfig asplosbr0 0.0.0.0 up
 
 <span class=c1># Disable packet filtering on bridge interfaces</span>
@@ -184,7 +184,7 @@ so your transmit code should look like this:</p><div class=highlight><pre class=
 
 <span class=cm>/* Do not touch pkt here anymore, on success uk_netdev_tx_one clears the memory  */</span>
 <span class=cm>/* &lt;...&gt; */</span>
-</code></pre></div><p>In order to see if everything works, attach <code>tshark</code> or <code>tcpdump</code> on your Linux host to <code>asplosbr0</code> on a second terminal:</p><div class=highlight><pre class=chroma><code class=language-sh data-lang=sh>$ tshark -i asplosbr0
+</code></pre></div><p>In order to see if everything works, attach <code>tshark</code> or <code>tcpdump</code> on your Linux host to <code>asplosbr0</code> on a second terminal:</p><div class=highlight><pre class=chroma><code class=language-sh data-lang=sh>$ sudo tshark -i asplosbr0
 </code></pre></div><p>Whenever you launch your unikernel, you should be able to see the UDP packet:</p><div class=highlight><pre class=chroma><code class=language-fallback data-lang=fallback>    3 1.050213439 192.168.128.1 → 192.168.128.254 UDP 60 5001 → 5001 Len=18
 </code></pre></div><p>You may not see the exact source IP or destination, but the UDP packet should be there along some IPV6 packets.</p><h3 id=04-dont-stop>04. Don&rsquo;t Stop</h3><p>Now let us send as much as we can with the current implementation.
 You can simply loop forever over packet generation and sending.
