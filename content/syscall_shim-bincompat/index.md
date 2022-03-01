@@ -352,9 +352,9 @@ For the practical work we will need the following prerequisites:
 
 * **lwip, zydis, libelf libs** - we have to clone all the repos coresponding to the previously mentioned libraries into the libs folder.
   All of them have to be on the `staging` branch.
-    * [lwip](https://github.com/unikraft/lwip.git)
-    * [zydis](https://github.com/unikraft/lib-zydis.git)
-    * [libelf](https://github.com/unikraft/lib-libelf.git)
+    * [lwip](https://github.com/unikraft/lib-lwip)
+    * [zydis](https://github.com/unikraft/lib-zydis)
+    * [libelf](https://github.com/unikraft/lib-libelf)
 
 * **unikraft** - the [Unikraft repository](https://github.com/unikraft/unikraft) must also be cloned and checked out on the `usoc21` branch.
 
@@ -365,8 +365,8 @@ syscall_shim-bincompat/
 `-- apps/
 |   `-- app-elfloader/ [usoc21]
 `-- libs/
-|   |-- lwip/ [staging]
 |   |-- libelf/ [staging]
+|   |-- lwip/ [staging]
 |   `-- zydis/ [staging]
 `-- unikraft/ [usoc21]
 ```
@@ -377,25 +377,41 @@ The goal of this task is to make sure that our setup is correct.
 The first step is to copy the correct `.config` file into our application.
 
 ```
-$ cp ~/asplos22-tutorial/content/syscallshim_bin-bicompat/work/01/config ~/syscall_shim-bincompat/apps/app-elfloader/.config
+$ cp ~/asplos22-tutorial/content/syscall_shim-bincompat/work/01/config ~/syscall_shim-bincompat/apps/app-elfloader/.config
 ```
 
 To check that the config file is the correct one, go to the `app-elfloader/` directory and configure it:
 
-1. Change the directory to `syscall_shim-bincompat/apps/app-elfloader/`.
-1. Run `make menuconfig`
-1. Select `library configuration`.
+1. Change the directory to `~/syscall_shim-bincompat/apps/app-elfloader/`.
+1. Check the configuration:
+
+   ```
+   make menuconfig
+   ```
+
+1. Select `Library Configuration`.
    It should look like the below picture.
    Take a moment and inspect all the sub-menus, especially the syscall-shim one.
 
    ![Libraries configuration](images/config-image.png)
 
-If everything is correct, we can run `make` and the image for our unikernel should be compiled.
-In the `build/` folder you should have the `elfloader_kvm-x86_64` binary.
-To also test if it runs correctly:
+If everything seems correct, build the unikernel loader image:
 
 ```
-.../apps/app-elfloader$ qemu-guest -k build/elfloader_kvm-x86_64
+$ make
+```
+
+In the `build/` folder you should have the `elfloader_kvm-x86_64` binary.
+To also test if it runs correctly, copy the `qemu-guest` script from the `a-look-inside/` session:
+
+```
+$ cp ~/asplos22-tutorial/content/a-look-inside/work/02-adding-filesystems/qemu-guest ~/syscall_shim-bincompat/apps/app-elfloader/
+```
+
+And use `qemu-guest` to run the ELF loader image:
+
+```
+.../apps/app-elfloader$ ./qemu-guest -k build/elfloader_kvm-x86_64
 
 SeaBIOS (version 1.10.2-1ubuntu1)
 Booting from ROM...
@@ -451,7 +467,7 @@ gcc -static-pie helloworld.o  -o helloworld
 .../apps/app-elfloader/example/helloworld$ ldd helloworld
 	statically linked
 
-.../apps/app-elfloader/example/helloworld$ checksec helloworld
+.../apps/app-elfloader/example/helloworld$ checksec --file=helloworld
     Arch:     amd64-64-little
     RELRO:    Full RELRO
     Stack:    Canary found
