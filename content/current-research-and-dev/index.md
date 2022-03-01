@@ -1,5 +1,5 @@
 ---
-title: Unikernels: Paths to Production & Current Research Trends
+title: "Unikernels: Paths to Production & Current Research Trends"
 date: 2019-02-11T19:27:37+10:00
 weight: 6
 summary: We go through current research and development tracks in the Unikraft project. Expected time 30mn.
