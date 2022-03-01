@@ -578,6 +578,22 @@ $ sudo ip l set dev virbr0 down
 $ sudo brctl delbr virbr0
 ```
 
+##### Generating a initram
+
+Create a filesystem CPIO file by `cd`ing into the directory you wish to mount, then running:
+
+```bash
+find -depth -print | tac | bsdcpio -o --format newc > ../initramfs.cpio
+```
+
+This generates `initramfs.cpio` which you can mount like so via `qemu-guest`:
+```bash
+qemu-guest -k ./build/myunikerne_kvm-x86_64 -i ./initramfs.cpio
+```
+
+Be sure to enable `ukcpio`, `ramfs`, and to set "InitRD" as the default mount in `vfscore`.
+
+
 #### The Manual Way
 
 ##### Initialize
